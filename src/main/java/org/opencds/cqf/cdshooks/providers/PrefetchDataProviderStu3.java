@@ -1,6 +1,8 @@
 package org.opencds.cqf.cdshooks.providers;
 
 import ca.uhn.fhir.context.FhirContext;
+import org.opencds.cqf.cdshooks.discovery.DiscoveryResolution;
+import org.opencds.cqf.cql.data.DataProvider;
 import org.opencds.cqf.cql.data.fhir.FhirDataProviderStu3;
 import org.opencds.cqf.cql.elm.execution.InEvaluator;
 import org.opencds.cqf.cql.elm.execution.IncludesEvaluator;
@@ -14,9 +16,11 @@ import java.util.*;
 public class PrefetchDataProviderStu3 extends FhirDataProviderStu3 {
 
     private Map<String, List<Object>> prefetchResources;
+    private DataProvider remoteProvider;
 
-    public PrefetchDataProviderStu3(List<Object> resources) {
+    public PrefetchDataProviderStu3(List<Object> resources, DataProvider remoteProvider) {
         prefetchResources = PrefetchDataProviderHelper.populateMap(resources);
+        this.remoteProvider = remoteProvider;
         setPackageName("org.hl7.fhir.dstu3.model");
         setFhirContext(FhirContext.forDstu3());
     }
@@ -32,6 +36,10 @@ public class PrefetchDataProviderStu3 extends FhirDataProviderStu3 {
 
         if (dataType == null) {
             throw new IllegalArgumentException("A data type (i.e. Procedure, Valueset, etc...) must be specified for clinical data retrieval");
+        }
+
+        if (!DiscoveryResolution.isPatientCompartment(dataType)) {
+            return remoteProvider.retrieve(context, contextValue, dataType, templateId, codePath, codes, valueSet, datePath, dateLowPath, dateHighPath, dateRange);
         }
 
         List<Object> resourcesOfType = prefetchResources.get(dataType);

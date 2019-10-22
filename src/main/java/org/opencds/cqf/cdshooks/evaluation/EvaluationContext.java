@@ -9,6 +9,7 @@ import org.hl7.fhir.dstu3.model.PlanDefinition;
 import org.hl7.fhir.dstu3.model.Resource;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.opencds.cqf.cdshooks.hooks.Hook;
+import org.opencds.cqf.cdshooks.providers.RemoteFhirDataProvider;
 import org.opencds.cqf.config.STU3LibraryLoader;
 import org.opencds.cqf.cql.data.fhir.BaseFhirDataProvider;
 import org.opencds.cqf.cql.data.fhir.FhirDataProviderDstu2;
@@ -74,7 +75,7 @@ public class EvaluationContext {
                         remoteProvider = new FhirDataProviderDstu2().setEndpoint(hook.getRequest().getFhirServerUrl());
                         break;
                     case DSTU3:
-                        remoteProvider = new FhirDataProviderStu3().setEndpoint(hook.getRequest().getFhirServerUrl());
+                        remoteProvider = new RemoteFhirDataProvider().setEndpoint(hook.getRequest().getFhirServerUrl());
                         break;
                     default:
                         throw new NotImplementedException("This CDS Hooks implementation is not configured for FHIR version: " + fhirVersion.getFhirVersionString());

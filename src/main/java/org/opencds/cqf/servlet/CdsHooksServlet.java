@@ -4,19 +4,16 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import com.google.gson.*;
 import org.apache.http.entity.ContentType;
-import org.hl7.fhir.dstu3.model.PlanDefinition;
+import org.opencds.cqf.cdshooks.discovery.DiscoveryResolution;
 import org.opencds.cqf.cdshooks.evaluation.EvaluationContext;
 import org.opencds.cqf.cdshooks.hooks.Hook;
 import org.opencds.cqf.cdshooks.hooks.HookEvaluator;
 import org.opencds.cqf.cdshooks.hooks.HookFactory;
-import org.opencds.cqf.cdshooks.providers.Discovery;
-import org.opencds.cqf.cdshooks.providers.DiscoveryItem;
 import org.opencds.cqf.cdshooks.request.JsonHelper;
 import org.opencds.cqf.cdshooks.request.Request;
 import org.opencds.cqf.cdshooks.response.CdsCard;
 import org.opencds.cqf.config.HapiProperties;
 import org.opencds.cqf.exceptions.InvalidRequestException;
-import org.opencds.cqf.providers.FHIRPlanDefinitionResourceProvider;
 import org.opencds.cqf.providers.JpaDataProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +59,9 @@ public class CdsHooksServlet extends HttpServlet
             throw new ServletException("This servlet is not configured to handle GET requests.");
         }
 
+        String baseUrl = request.getRequestURL().toString().replace(request.getServletPath(), "") + "/baseDstu3";
+        provider.setEndpoint(baseUrl);
+
         this.setAccessControlHeaders(response);
         response.setHeader("Content-Type", ContentType.APPLICATION_JSON.getMimeType());
         response.getWriter().println(new GsonBuilder().setPrettyPrinting().create().toJson(getServices()));
@@ -88,6 +88,7 @@ public class CdsHooksServlet extends HttpServlet
             String baseUrl =
                     request.getRequestURL().toString()
                             .replace(request.getPathInfo(), "").replace(request.getServletPath(), "") + "/baseDstu3";
+            provider.setEndpoint(baseUrl);
             String service = request.getPathInfo().replace("/", "");
 
             JsonParser parser = new JsonParser();
@@ -143,60 +144,7 @@ public class CdsHooksServlet extends HttpServlet
 
     private JsonObject getServices()
     {
-        JsonObject responseJson = new JsonObject();
-        JsonArray services = new JsonArray();
-
-        FHIRPlanDefinitionResourceProvider provider = (FHIRPlanDefinitionResourceProvider) getProvider("PlanDefinition");
-        for (Discovery discovery : provider.getDiscoveries(version))
-        {
-            PlanDefinition planDefinition = discovery.getPlanDefinition();
-            JsonObject service = new JsonObject();
-            if (planDefinition != null)
-            {
-                if (planDefinition.hasAction())
-                {
-                    // TODO - this needs some work - too naive
-                    if (planDefinition.getActionFirstRep().hasTriggerDefinition())
-                    {
-                        if (planDefinition.getActionFirstRep().getTriggerDefinitionFirstRep().hasEventName())
-                        {
-                            service.addProperty("hook", planDefinition.getActionFirstRep().getTriggerDefinitionFirstRep().getEventName());
-                        }
-                    }
-                }
-                if (planDefinition.hasName())
-                {
-                    service.addProperty("name", planDefinition.getName());
-                }
-                if (planDefinition.hasTitle())
-                {
-                    service.addProperty("title", planDefinition.getTitle());
-                }
-                if (planDefinition.hasDescription())
-                {
-                    service.addProperty("description", planDefinition.getDescription());
-                }
-                service.addProperty("id", planDefinition.getIdElement().getIdPart());
-
-                if (!discovery.getItems().isEmpty())
-                {
-                    JsonObject prefetchContent = new JsonObject();
-                    for (DiscoveryItem item : discovery.getItems())
-                    {
-                        prefetchContent.addProperty(item.getItemNo(), item.getUrl());
-                    }
-                    service.add("prefetch", prefetchContent);
-                }
-            }
-            else
-            {
-                service.addProperty("Error", discovery.getItems().get(0).getUrl());
-            }
-            services.add(service);
-        }
-
-        responseJson.add("services", services);
-        return responseJson;
+        return new DiscoveryResolution(provider.getFhirClient()).resolve().getAsJson();
     }
 
     private String toJsonResponse(List<CdsCard> cards)

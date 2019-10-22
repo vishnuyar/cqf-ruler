@@ -31,9 +31,10 @@ public class HookEvaluator {
         // resolve PrefetchDataProvider
         BaseFhirDataProvider prefetchDataProvider =
                 context.getFhirVersion() == FhirVersionEnum.DSTU3
-                        ? new PrefetchDataProviderStu3(context.getPrefetchResources())
+                        ? new PrefetchDataProviderStu3(context.getPrefetchResources(), context.getRemoteProvider())
                         : new PrefetchDataProviderDstu2(context.getPrefetchResources());
         prefetchDataProvider.setTerminologyProvider(context.getSystemProvider().getTerminologyProvider());
+        prefetchDataProvider.setEndpoint(context.getRemoteProvider().getEndpoint());
         context.getContext().registerDataProvider("http://hl7.org/fhir", prefetchDataProvider);
         context.getContext().registerTerminologyProvider(prefetchDataProvider.getTerminologyProvider());
 
