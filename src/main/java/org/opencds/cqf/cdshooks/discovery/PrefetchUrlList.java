@@ -3,8 +3,9 @@ package org.opencds.cqf.cdshooks.discovery;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-public class PrefetchUrlList extends ArrayList<String> implements Serializable {
+public class PrefetchUrlList extends CopyOnWriteArrayList<String> implements Serializable {
 
     @Override
     public boolean add(String element) {
