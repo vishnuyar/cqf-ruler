@@ -119,7 +119,7 @@ public class RemoteFhirDataProvider extends BaseDataProviderStu3 {
                 boolean reference = false;
                 for (Object code : codes) {
                     if (code instanceof String) {
-                        params.append(String.format("%s=%s", convertPathToSearchParam(dataType, codePath), code));
+                        params.append(String.format("/%s", code));
                         reference = true;
                         break;
                     }
