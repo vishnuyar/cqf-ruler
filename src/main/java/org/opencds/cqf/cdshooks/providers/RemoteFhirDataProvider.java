@@ -4,6 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.gclient.DateClientParam;
 import ca.uhn.fhir.rest.gclient.IQuery;
 import ca.uhn.fhir.rest.gclient.TokenClientParam;
+import org.hl7.fhir.dstu3.model.Bundle;
 import org.hl7.fhir.dstu3.model.Enumeration;
 import org.hl7.fhir.dstu3.model.Resource;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
@@ -45,6 +46,7 @@ public class RemoteFhirDataProvider extends BaseDataProviderStu3 {
         IQuery<IBaseBundle> search = searchUsingPOST ? fhirClient.search().forResource(dataType) : null; //fhirClient.search().forResource(dataType);
         boolean doAnd = false;
         boolean isPatientCompartment = false;
+        boolean reference = false;
 
         // TODO: Would like to be able to use the criteria builders, but it looks like they don't have one for :in with a valueset?
         // So..... I'll just construct a search URL
@@ -116,7 +118,6 @@ public class RemoteFhirDataProvider extends BaseDataProviderStu3 {
             if (codes != null) {
                 StringBuilder codeList = new StringBuilder();
                 List<String> codeValues = new ArrayList<>();
-                boolean reference = false;
                 for (Object code : codes) {
                     if (code instanceof String) {
                         params.append(String.format("/%s", code));
@@ -199,8 +200,13 @@ public class RemoteFhirDataProvider extends BaseDataProviderStu3 {
 
         if (search == null) {
             // TODO: Use compartment search for patient context?
-            if (params.length() > 0) {
+            if (params.length() > 0 && !reference) {
                 search = fhirClient.search().byUrl(String.format("%s?%s", dataType, params.toString()));
+            }
+            else if (params.length() > 0 && reference) {
+                return new FhirBundleCursorStu3(fhirClient, new Bundle().addEntry(new Bundle.BundleEntryComponent().setResource((Resource) fhirClient.read().resource(dataType).withId(params.toString()).execute())));
+//                search = fhirClient.read().resource(dataType).withId(params.toString()).execute();
+//                search = fhirClient.search().byUrl(String.format("%s%s", dataType, params.toString()));
             }
             else {
                 search = fhirClient.search().byUrl(String.format("%s", dataType));
