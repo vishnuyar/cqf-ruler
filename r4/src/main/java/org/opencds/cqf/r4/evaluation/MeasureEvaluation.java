@@ -56,6 +56,7 @@ public class MeasureEvaluation {
         logger.info("Generating patient-list report");
 
         List<Patient> patients = practitionerRef == null ? getAllPatients() : getPractitionerPatients(practitionerRef);
+        System.out.println("number of patients: " + patients.size());
         return evaluate(measure, context, patients, MeasureReport.MeasureReportType.SUBJECTLIST);
     }
 
@@ -320,22 +321,25 @@ public class MeasureEvaluation {
                         boolean inInitialPopulation = evaluatePopulationCriteria(context, patient, initialPopulationCriteria,
                                 initialPopulation, initialPopulationPatients, null, null, null);
                         populateResourceMap(context, MeasurePopulationType.INITIALPOPULATION, resources, codeToResourceMap);
-
+                        System.out.println("Before");
                         if (inInitialPopulation) {
+                            System.out.println("in initial population");
                             // Are they in the denominator?
                             boolean inDenominator = evaluatePopulationCriteria(context, patient,
                                     denominatorCriteria, denominator, denominatorPatients,
                                     denominatorExclusionCriteria, denominatorExclusion, denominatorExclusionPatients);
                             populateResourceMap(context, MeasurePopulationType.DENOMINATOR, resources, codeToResourceMap);
-
+                            
                             if (inDenominator) {
+                                System.out.println("in denom");
                                 // Are they in the numerator?
                                 boolean inNumerator = evaluatePopulationCriteria(context, patient,
                                         numeratorCriteria, numerator, numeratorPatients,
                                         numeratorExclusionCriteria, numeratorExclusion, numeratorExclusionPatients);
                                 populateResourceMap(context, MeasurePopulationType.NUMERATOR, resources, codeToResourceMap);
-
+                                
                                 if (!inNumerator && inDenominator && (denominatorExceptionCriteria != null)) {
+                                    System.out.println("not numer and denom");
                                     // Are they in the denominator exception?
                                     boolean inException = false;
                                     for (Resource resource : evaluateCriteria(context, patient, denominatorExceptionCriteria)) {
@@ -344,11 +348,14 @@ public class MeasureEvaluation {
                                         denominator.remove(resource.getIdElement().getIdPart());
                                         populateResourceMap(context, MeasurePopulationType.DENOMINATOREXCEPTION, resources, codeToResourceMap);
                                     }
+                                    
                                     if (inException) {
                                         if (denominatorExceptionPatients != null) {
+                                            System.out.println("exception");
                                             denominatorExceptionPatients.put(patient.getIdElement().getIdPart(), patient);
                                         }
                                         if (denominatorPatients != null) {
+                                            System.out.println("denompatients");
                                             denominatorPatients.remove(patient.getIdElement().getIdPart());
                                         }
                                     }
@@ -359,6 +366,7 @@ public class MeasureEvaluation {
 
                     // Calculate actual measure score, Count(numerator) / Count(denominator)
                     if (denominator != null && numerator != null && denominator.size() > 0) {
+                        System.out.println("calculating measure score");
                         reportGroup.setMeasureScore(new Quantity(numerator.size() / (double)denominator.size()));
                     }
 
