@@ -9,6 +9,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.opencds.cqf.cql.retrieve.*;
 import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
 
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
@@ -40,6 +41,8 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     protected Collection<Object> executeQuery(String dataType, SearchParameterMap map) {
         IFhirResourceDao<?> dao = this.registry.getResourceDao(dataType);
         IBundleProvider bundleProvider = dao.search(map);
+        
+        System.out.println("running Mapstring:"+dataType+map.toNormalizedQueryString(FhirContext.forR4()));
         if (bundleProvider.size() == null)
         {
             return resolveResourceList(bundleProvider.getResources(0, 10000));
@@ -53,6 +56,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
     public synchronized Collection<Object> resolveResourceList(List<IBaseResource> resourceList) {
         List<Object> ret = new ArrayList<>();
+        System.out.println("size is: "+resourceList.size());
         for (IBaseResource res : resourceList) {
             Class<?> clazz = res.getClass();
             ret.add(clazz.cast(res));
