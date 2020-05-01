@@ -1,5 +1,6 @@
 package org.opencds.cqf.r4.providers;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,10 +19,12 @@ import org.hl7.fhir.r4.model.Measure;
 import org.hl7.fhir.r4.model.MeasureReport;
 import org.hl7.fhir.r4.model.Narrative;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.MeasureScoring;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -221,12 +224,35 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Bundle careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @RequiredParam(name = "topic") String topic,
-            @RequiredParam(name = "patient") String patientRef) {
-        List<IBaseResource> measures = this.measureResourceProvider.getDao().search(new SearchParameterMap().add("topic",
-                new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic))).getResources(0, 1000);
+            @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "topic") String topic,
+            @RequiredParam(name = "patient") String patientRef, @OptionalParam(name = "program") String program,
+            @OperationParam(name = "measure") String measureparam, @OptionalParam(name="practitioner") String practitionerRef,
+            @OperationParam(name = "status") String status
+            ) {
         Bundle careGapReport = new Bundle();
         careGapReport.setType(Bundle.BundleType.DOCUMENT);
+        
+        //checking for optional params provided
+        List<IBaseResource> measures = new ArrayList<IBaseResource>();
+        boolean topicgiven = false;
+        boolean measuregiven = false;
+        if (topic != null) {
+            List<IBaseResource> tmeasures = this.measureResourceProvider.getDao().search(new SearchParameterMap().add("topic",
+                new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic))).getResources(0, 1000);
+            System.out.println(tmeasures.size());
+            measures.addAll(tmeasures);
+            System.out.println("t: "+measures.size());
+        
+        }
+        if(measureparam !=null){ 
+            List<IBaseResource> parammeasures = this.measureResourceProvider.getDao().search(new SearchParameterMap().add("_id",
+                new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(measureparam))).getResources(0, 1000);
+            System.out.println(parammeasures.size());
+            measures.addAll(parammeasures);
+            System.out.println("m: "+measures.size());
+        }
+
+        
 
         Composition composition = new Composition();
         // TODO - this is a placeholder code for now ... replace with preferred code
@@ -235,7 +261,7 @@ public class MeasureOperationsProvider {
                 .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode)
                 .setSubject(new Reference(patientRef.startsWith("Patient/") ? patientRef : "Patient/" + patientRef))
-                .setTitle(topic + " Care Gap Report");
+                .setTitle("Care Gap Report");
 
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
@@ -260,7 +286,15 @@ public class MeasureOperationsProvider {
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry, seed.getMeasurementPeriod());
             // TODO - this is configured for patient-level evaluation only
-            report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
+            
+            if (practitionerRef != null) {
+                report =  evaluator.evaluateSubjectListMeasure(seed.getMeasure(), seed.getContext(), practitionerRef);
+            }else{
+                report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
+
+            }
+            
+            
 
             if (report.hasGroup() && measure.hasScoring()) {
                 int numerator = 0;
@@ -316,11 +350,36 @@ public class MeasureOperationsProvider {
         }
 
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
-
+        
+        
+        // Add the reports based on status parameter
+        boolean addreport;
         for (MeasureReport rep : reports) {
-            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
+            for (MeasureReport.MeasureReportGroupComponent group : report.getGroup()) {
+                addreport = false;
+                if (group.hasMeasureScore()){
+                    BigDecimal scorevalue = group.getMeasureScore().getValue();
+                    System.out.println("the measure score is " + scorevalue.toString());
+                    System.out.println("the status is "+status);
+                    if (status == null){
+                        System.out.println("both gaps");
+                        addreport = true;
+                    } else if ((scorevalue.compareTo(new BigDecimal (1))== 0 ) && status.equals("closed-gaps")){
+                        System.out.println("closed gaps");
+                        addreport = true;
+                    } else if ((scorevalue.compareTo(new BigDecimal (0))== 0 ) && status.equals("open-gaps")){
+                        System.out.println("open gaps");
+                        addreport = true;
+                        
+                    } else{
+                        addreport = false;
+                    }
+                }
+                if (addreport){
+                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
+                }
+            }
         }
-
         return careGapReport;
     }
 
