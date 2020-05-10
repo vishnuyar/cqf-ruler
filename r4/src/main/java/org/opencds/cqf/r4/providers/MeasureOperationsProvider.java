@@ -343,15 +343,18 @@ public class MeasureOperationsProvider {
                         composition.addSection(section);
                         reports.add(report);
                     }
+                } else{
+                    // TODO - add other types of improvement notation cases
+                    reports.add(report);
                 }
 
-                // TODO - add other types of improvement notation cases
+                
             }
         }
 
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
         
-        
+        System.out.println("Now add the measure report to care gap report");
         // Add the reports based on status parameter
         boolean addreport;
         for (MeasureReport rep : reports) {
