@@ -400,7 +400,7 @@ public class MeasureOperationsProvider {
         Parameters parameters = new Parameters();
 
         parameters.addParameter(
-                new Parameters.ParametersParameterComponent().setName("measurereport").setResource(report));
+                new Parameters.ParametersParameterComponent().setName("measure-report").setResource(report));
 
         if (report.hasContained()) {
             for (Resource contained : report.getContained()) {
