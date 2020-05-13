@@ -78,15 +78,15 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         if (HapiProperties.getProperties().containsKey("patient_server_url")) {
             local = false;
         }
-
+        String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
+        System.out.println("The query string is " + searchURL);
+       
         IGenericClient client;
         List<IBaseResource> resourceList = new ArrayList<>();
         if (!local) {
             String purl = HapiProperties.getProperties().getProperty("patient_server_url");
             client = FhirContext.forR4().newRestfulGenericClient(purl);
 
-            String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
-            System.out.println("The query string is " + client.getServerBase() + searchURL);
             IBaseBundle bundle = client.search().byUrl(searchURL)
                     .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
             List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
