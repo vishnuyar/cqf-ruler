@@ -454,7 +454,7 @@ public class MeasureOperationsProvider {
         Parameters parameters = new Parameters();
 
         parameters.addParameter(
-                new Parameters.ParametersParameterComponent().setName("measure-report").setResource(report));
+                new Parameters.ParametersParameterComponent().setName("measureReport").setResource(report));
 
         if (report.hasContained()) {
             for (Resource contained : report.getContained()) {
@@ -528,7 +528,7 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$submit-data", idempotent = true, type = Measure.class)
     public Resource submitData(RequestDetails details, @IdParam IdType theId,
-            @OperationParam(name = "measure-report", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
+            @OperationParam(name = "measureReport", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
             @OperationParam(name = "resource") List<IAnyResource> resources) {
         Bundle transactionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
 
