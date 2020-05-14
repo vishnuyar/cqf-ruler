@@ -24,7 +24,7 @@
     </dependencies>
 
     <build>
-        <finalName>cqf-ruler-r4</finalName>
+        <finalName>interop</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -57,7 +57,7 @@
                             </systemProperty>
                         </systemProperties>
                         <webApp>
-                            <contextPath>/cqf-ruler-r4</contextPath>
+                            <contextPath>/interop</contextPath>
                             <allowDuplicateFragmentNames>true</allowDuplicateFragmentNames>
                         </webApp>
                     </configuration>
