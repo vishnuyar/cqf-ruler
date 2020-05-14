@@ -350,7 +350,7 @@ public class MeasureOperationsProvider {
                 .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
         
-        composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getName());
+        composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getId());
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
