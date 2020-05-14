@@ -10,11 +10,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.ActivityDefinition;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.Measure;
 import org.hl7.fhir.r4.model.Meta;
+import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.opencds.cqf.common.config.HapiProperties;
@@ -30,12 +33,14 @@ import org.opencds.cqf.r4.evaluation.ProviderFactory;
 import org.opencds.cqf.r4.providers.ActivityDefinitionApplyProvider;
 import org.opencds.cqf.r4.providers.ApplyCqlOperationProvider;
 import org.opencds.cqf.r4.providers.CacheValueSetsProvider;
+import org.opencds.cqf.r4.providers.ClaimProvider;
 import org.opencds.cqf.r4.providers.CodeSystemUpdateProvider;
 import org.opencds.cqf.r4.providers.CqlExecutionProvider;
 import org.opencds.cqf.r4.providers.HQMFProvider;
 import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
 import org.opencds.cqf.r4.providers.LibraryOperationsProvider;
 import org.opencds.cqf.r4.providers.MeasureOperationsProvider;
+import org.opencds.cqf.r4.providers.PatientProvider;
 import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
@@ -53,6 +58,7 @@ import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
 import ca.uhn.fhir.jpa.search.DatabaseBackedPagingProvider;
+
 import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
 import ca.uhn.fhir.jpa.util.ResourceProviderFactory;
 import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
@@ -65,6 +71,7 @@ import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 public class BaseServlet extends RestfulServer {
     DaoRegistry registry;
     FhirContext fhirContext;
+    ApplicationContext ctx;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -74,6 +81,7 @@ public class BaseServlet extends RestfulServer {
         // System level providers
         ApplicationContext appCtx = (ApplicationContext) getServletContext()
                 .getAttribute("org.springframework.web.context.WebApplicationContext.ROOT");
+        this.ctx = appCtx;
 
         // Fhir Context
         this.fhirContext = appCtx.getBean(FhirContext.class);
@@ -220,6 +228,19 @@ public class BaseServlet extends RestfulServer {
         MeasureOperationsProvider measureProvider = new MeasureOperationsProvider(this.registry, providerFactory, narrativeProvider, hqmfProvider, 
             libraryProvider, (MeasureResourceProvider)this.getResourceProvider(Measure.class));
         this.registerProvider(measureProvider);
+        
+        IFhirResourceDao<Patient> patientDao = (IFhirResourceDao<Patient>) ctx.getBean("myPatientDaoR4", IFhirResourceDao.class);
+        IFhirResourceDao<Coverage> coverageDao  = (IFhirResourceDao<Coverage>) ctx.getBean("myCoverageDaoR4", IFhirResourceDao.class);
+
+        PatientProvider patientRp = new PatientProvider(this.registry.getSystemDao(),coverageDao);
+        patientRp.setDao(patientDao);
+    	  registerProvider(patientRp);
+
+        IFhirResourceDao<Claim> claimDao = (IFhirResourceDao<Claim>) ctx.getBean("myClaimDaoR4", IFhirResourceDao.class);
+        ClaimProvider claimRp = new ClaimProvider(ctx);
+        claimRp.setDao(claimDao);
+    	  registerProvider(claimRp);
+    	
 
         // // ActivityDefinition processing
         ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, cql, this.getDao(ActivityDefinition.class));
@@ -230,6 +251,7 @@ public class BaseServlet extends RestfulServer {
         // PlanDefinition processing
         PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
         this.registerProvider(planDefProvider);
+        
 
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);
         CdsHooksServlet.setLibraryResolutionProvider(libraryProvider);
