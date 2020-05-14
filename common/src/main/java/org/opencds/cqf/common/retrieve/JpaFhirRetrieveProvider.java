@@ -3,6 +3,7 @@ package org.opencds.cqf.common.retrieve;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -25,6 +26,12 @@ import ca.uhn.fhir.util.bundle.BundleEntryParts;
 public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
     DaoRegistry registry;
+    
+    public static ThreadLocal<String> patient_fhir;
+    
+    static {
+    	patient_fhir.set("");
+    }
 
     public JpaFhirRetrieveProvider(DaoRegistry registry, SearchParameterResolver searchParameterResolver) {
         super(searchParameterResolver);
@@ -75,8 +82,15 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         IFhirResourceDao<?> dao = this.registry.getResourceDao(dataType);
         FhirContext myFhirContext = FhirContext.forR4();
         boolean local = true;
+        String purl = "";
         if (HapiProperties.getProperties().containsKey("patient_server_url")) {
             local = false;
+            
+            purl = HapiProperties.getProperties().getProperty("patient_server_url");
+        }
+        if (!patient_fhir.get().equals("")) {
+        	local = false;
+        	purl = patient_fhir.get();
         }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
         System.out.println("The query string is " + searchURL);
@@ -84,7 +98,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         IGenericClient client;
         List<IBaseResource> resourceList = new ArrayList<>();
         if (!local) {
-            String purl = HapiProperties.getProperties().getProperty("patient_server_url");
+            
             client = FhirContext.forR4().newRestfulGenericClient(purl);
 
             IBaseBundle bundle = client.search().byUrl(searchURL)

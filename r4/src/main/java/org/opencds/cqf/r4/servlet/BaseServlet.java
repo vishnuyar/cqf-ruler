@@ -1,8 +1,11 @@
 package org.opencds.cqf.r4.servlet;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.ActivityDefinition;
@@ -243,4 +246,16 @@ public class BaseServlet extends RestfulServer {
         return (BaseJpaResourceProvider<T> ) this.getResourceProviders().stream()
         .filter(x -> x.getResourceType().getSimpleName().equals(clazz.getSimpleName())).findFirst().get();
     }
+
+	@Override
+	protected void service(HttpServletRequest theReq, HttpServletResponse theResp)
+			throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		if (theReq.getHeader("patient_fhir") != null) {
+			JpaFhirRetrieveProvider.patient_fhir.set(theReq.getHeader("patient_fhir"));
+		}
+		super.service(theReq, theResp);
+	}
+    
+    
 }
