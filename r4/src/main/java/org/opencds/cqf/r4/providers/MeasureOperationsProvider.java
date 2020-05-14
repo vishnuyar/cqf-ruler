@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,7 @@ import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
@@ -165,7 +167,7 @@ public class MeasureOperationsProvider {
     @Operation(name = "$evaluate-measure", idempotent = true, type = Measure.class)
     public MeasureReport evaluateMeasure(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
             @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "measure") String measureRef,
-            @OptionalParam(name = "reportType") String reportType, @OptionalParam(name = "patient") String patientRef,
+            @OptionalParam(name = "reportType") String reportType, @OptionalParam(name = "subject") String patientRef,
             @OptionalParam(name = "productLine") String productLine,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OptionalParam(name = "lastReceivedOn") String lastReceivedOn,
@@ -249,15 +251,17 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "measure") String measureparam,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OperationParam(name = "status") String status) {
+    	
         Bundle careGapReport = new Bundle();
-        careGapReport.setType(Bundle.BundleType.DOCUMENT);
+        
+        List<Patient> patients= new ArrayList<>();
+        List<Measure> measures = new ArrayList<>();
+        
 
         if ((patientRef == null) & (practitionerRef == null)) {
             throw new RuntimeException("Subject and Practitioner both cannot be null!");
         }
-
-        // checking for optional params provided
-        List<IBaseResource> measures = new ArrayList<IBaseResource>();
+        
         boolean topicgiven = false;
         boolean measuregiven = false;
 
@@ -292,22 +296,52 @@ public class MeasureOperationsProvider {
             topicSearch.add("status", new TokenParam().setValue("active"));
             System.out.println("status search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
 
-            List<IBaseResource> tmeasures = this.measureResourceProvider.getDao().search(topicSearch).getResources(0,
-                    1000);
-            System.out.println(tmeasures.size());
-            measures.addAll(tmeasures);
+            
+            IBundleProvider bundleProvider = this.measureResourceProvider.getDao().search(topicSearch);
+            List<IBaseResource> resources = bundleProvider.getResources(0, 10000);
+            for (Iterator iterator = resources.iterator(); iterator.hasNext();) {
+            	Measure res = (Measure)(iterator.next());
+            	measures.add(res);
+			}
             System.out.println("t: " + measures.size());
 
         }
         if (measureparam != null) {
-            List<IBaseResource> parammeasures = this.measureResourceProvider.getDao()
+            
+            
+            IBundleProvider bundleProvider = this.measureResourceProvider.getDao()
                     .search(new SearchParameterMap().add("_id",
-                            new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(measureparam)))
-                    .getResources(0, 1000);
-            System.out.println(parammeasures.size());
-            measures.addAll(parammeasures);
-            System.out.println("m: " + measures.size());
+                            new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(measureparam)));
+                    
+            List<IBaseResource> resources = bundleProvider.getResources(0, 10000);
+            for (Iterator iterator = resources.iterator(); iterator.hasNext();) {
+            	Measure res = (Measure)(iterator.next());
+            	measures.add(res);
+			}
         }
+        if (practitionerRef != null) {
+            List<Patient> practitionerPatients = getPractitionerPatients(practitionerRef);
+            patients.addAll(practitionerPatients);
+        }
+        if (patientRef != null) {
+        	patients.add(getPatients(patientRef));
+        }
+        for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
+            Patient patient = (Patient) iterator.next();
+            Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd);
+            
+            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(careGapBundle));     
+            
+		}
+        return careGapReport;
+
+       
+    }
+    
+    private Bundle getCareGapReport(Patient patient, List<Measure> measures, String status,
+    		String periodStart, String periodEnd) {
+    	Bundle careGapReport = new Bundle();
+        careGapReport.setType(Bundle.BundleType.DOCUMENT);
 
         Composition composition = new Composition();
         // TODO - this is a placeholder code for now ... replace with preferred code
@@ -315,30 +349,13 @@ public class MeasureOperationsProvider {
         CodeableConcept typeCode = new CodeableConcept()
                 .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
-
-        // Check if the subject is of type patient or group
-        boolean isGroup = false;
-        String groupId = "";
-        System.out.println("patient param is : " + patientRef);
-        if (patientRef.startsWith("Group/")) {
-            isGroup = true;
-            groupId = patientRef.split("/")[1];
-            composition.setSubject(new Reference(patientRef)).setTitle("Group Care Gap Report");
-
-        } else {
-            composition
-                    .setSubject(new Reference(patientRef.startsWith("Patient/") ? patientRef : "Patient/" + patientRef))
-                    .setTitle("Patient Care Gap Report");
-        }
-
+        
+        composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getName());
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
-        for (IBaseResource resource : measures) {
-            Composition.SectionComponent section = new Composition.SectionComponent();
-
-            Measure measure = (Measure) resource;
-            section.addEntry(
-                    new Reference(measure.getIdElement().getResourceType() + "/" + measure.getIdElement().getIdPart()));
+        for (Measure measure : measures) {
+            Composition.SectionComponent section = new Composition.SectionComponent();        
+            section.addEntry(new Reference(measure));
             if (measure.hasTitle()) {
                 section.setTitle(measure.getTitle());
             }
@@ -357,32 +374,10 @@ public class MeasureOperationsProvider {
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                     seed.getMeasurementPeriod());
-            // TODO - this is configured for patient-level evaluation only
-
-            if (practitionerRef != null) {
-                List<Patient> patients = getPractitionerPatients(practitionerRef);
-                for (Patient patient : patients) {
-                    report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getId());
-
-                    reports.add(report);
-                }
-            } else if (isGroup) {
-
-                // If they are a group of patients, generate report for each patient
-                List<Patient> patients = getGroupPatients(groupId);
-                for (Patient patient : patients) {
-                    report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getId());
-                    reports.add(report);
-                }
-
-            } else {
-                report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
-                System.out.println("The status of report is " + report.getStatus());
-                reports.add(report);
-
-            }
+            System.out.println("The patient: " + patient.getId());
+            report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getId());
+            reports.add(report);
             composition.addSection(section);
-
         }
 
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
@@ -391,7 +386,7 @@ public class MeasureOperationsProvider {
         // Add the reports based on status parameter
         boolean addreport;
         for (MeasureReport rep : reports) {
-            for (MeasureReport.MeasureReportGroupComponent group : report.getGroup()) {
+            for (MeasureReport.MeasureReportGroupComponent group : rep.getGroup()) {
                 addreport = false;
                 if (group.hasMeasureScore()) {
                     BigDecimal scorevalue = group.getMeasureScore().getValue();
@@ -417,16 +412,19 @@ public class MeasureOperationsProvider {
             }
         }
         return careGapReport;
+    	
     }
 
     private List<Patient> getGroupPatients(String groupId) {
         List<Patient> patients = new ArrayList<>();
-
-        // Group patientgroup = this.registry.getResourceDao("Group").read(groupId);
+        
+       
         // // IIdType(GroupId));
         // patientgroup.getMember();
         return patients;
     }
+    
+    
 
     private List<Patient> getPractitionerPatients(String practitionerRef) {
         SearchParameterMap map = new SearchParameterMap();
@@ -439,10 +437,19 @@ public class MeasureOperationsProvider {
         patientList.forEach(x -> patients.add((Patient) x));
         return patients;
     }
+    
+    private Patient getPatients(String patientRef) {
+    	if (!patientRef.startsWith("Patient/")) {
+    		patientRef = "Patient/" + patientRef;
+    	}
+        IIdType id = new Reference(patientRef).getReferenceElement();
+        Patient patient = (Patient)registry.getResourceDao("Patient").read(id);
+        return patient;
+    }
 
     @Operation(name = "$collect-data", idempotent = true, type = Measure.class)
     public Parameters collectData(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "patient") String patientRef,
+            @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "subject") String patientRef,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OptionalParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException {
         // TODO: Spec says that the periods are not required, but I am not sure what to
