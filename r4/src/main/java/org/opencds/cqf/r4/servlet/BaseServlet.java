@@ -71,7 +71,7 @@ import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 public class BaseServlet extends RestfulServer {
     DaoRegistry registry;
     FhirContext fhirContext;
-    ApplicationContext ctx;
+    ApplicationContext appCtx;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -79,9 +79,9 @@ public class BaseServlet extends RestfulServer {
         super.initialize();
 
         // System level providers
-        ApplicationContext appCtx = (ApplicationContext) getServletContext()
+        appCtx = (ApplicationContext) getServletContext()
                 .getAttribute("org.springframework.web.context.WebApplicationContext.ROOT");
-        this.ctx = appCtx;
+        
 
         // Fhir Context
         this.fhirContext = appCtx.getBean(FhirContext.class);
@@ -229,15 +229,15 @@ public class BaseServlet extends RestfulServer {
             libraryProvider, (MeasureResourceProvider)this.getResourceProvider(Measure.class));
         this.registerProvider(measureProvider);
         
-        IFhirResourceDao<Patient> patientDao = (IFhirResourceDao<Patient>) ctx.getBean("myPatientDaoR4", IFhirResourceDao.class);
-        IFhirResourceDao<Coverage> coverageDao  = (IFhirResourceDao<Coverage>) ctx.getBean("myCoverageDaoR4", IFhirResourceDao.class);
+        IFhirResourceDao<Patient> patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
+        IFhirResourceDao<Coverage> coverageDao  = (IFhirResourceDao<Coverage>) appCtx.getBean("myCoverageDaoR4", IFhirResourceDao.class);
 
         PatientProvider patientRp = new PatientProvider(this.registry.getSystemDao(),coverageDao);
         patientRp.setDao(patientDao);
     	  registerProvider(patientRp);
 
-        IFhirResourceDao<Claim> claimDao = (IFhirResourceDao<Claim>) ctx.getBean("myClaimDaoR4", IFhirResourceDao.class);
-        ClaimProvider claimRp = new ClaimProvider(ctx);
+        IFhirResourceDao<Claim> claimDao = (IFhirResourceDao<Claim>) appCtx.getBean("myClaimDaoR4", IFhirResourceDao.class);
+        ClaimProvider claimRp = new ClaimProvider(appCtx);
         claimRp.setDao(claimDao);
     	  registerProvider(claimRp);
     	
