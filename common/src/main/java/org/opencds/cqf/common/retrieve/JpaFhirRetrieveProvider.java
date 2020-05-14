@@ -30,6 +30,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     public static ThreadLocal<String> patient_fhir;
     
     static {
+        patient_fhir = new ThreadLocal<String>();
     	patient_fhir.set("");
     }
 
@@ -88,9 +89,13 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             
             purl = HapiProperties.getProperties().getProperty("patient_server_url");
         }
-        if (!patient_fhir.get().equals("")) {
-        	local = false;
-        	purl = patient_fhir.get();
+        if (patient_fhir.get() != null) {
+
+            
+            if (!patient_fhir.get().equals("")) {
+                local = false;
+                purl = patient_fhir.get();
+            }
         }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
         System.out.println("The query string is " + searchURL);
