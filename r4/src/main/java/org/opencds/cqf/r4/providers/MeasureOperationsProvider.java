@@ -245,14 +245,16 @@ public class MeasureOperationsProvider {
     // }
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
-    public Bundle careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
+    public Parameters careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
             @OptionalParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "topic") String topic,
             @RequiredParam(name = "subject") String patientRef, @OptionalParam(name = "program") String program,
             @OperationParam(name = "measure") String measureparam,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OperationParam(name = "status") String status) {
     	
-        Bundle careGapReport = new Bundle();
+        Parameters parameters = new Parameters();
+
+        
         
         List<Patient> patients= new ArrayList<>();
         List<Measure> measures = new ArrayList<>();
@@ -329,11 +331,12 @@ public class MeasureOperationsProvider {
         for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
             Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd);
-            
-            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(careGapBundle));     
+            parameters.addParameter(
+                new Parameters.ParametersParameterComponent().setName("Care Gap Report for "+patient.getIdBase()).setResource(careGapBundle));
+            //careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(careGapBundle));     
             
 		}
-        return careGapReport;
+        return parameters;
 
        
     }
