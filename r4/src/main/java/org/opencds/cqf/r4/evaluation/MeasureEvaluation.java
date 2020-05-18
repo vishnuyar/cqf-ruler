@@ -1,5 +1,6 @@
 package org.opencds.cqf.r4.evaluation;
 
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -80,10 +81,23 @@ public class MeasureEvaluation {
 
     private List<Patient> getAllPatients() {
         List<Patient> patients = new ArrayList<>();
-        IBundleProvider patientProvider = registry.getResourceDao("Patient").search(new SearchParameterMap());
-        List<IBaseResource> patientList = patientProvider.getResources(0, patientProvider.size());
-        patientList.forEach(x -> patients.add((Patient) x));
-        return patients;
+        Iterable<Object> patientRetrieve = provider.retrieve("Patient", "id", null, "Patient", null, null, null, null, null, null, null, null);
+        
+        for (Iterator iterator = patientRetrieve.iterator(); iterator.hasNext();) {
+            Patient patient = (Patient) iterator.next();
+            patients.add(patient);
+        }
+        System.out.println("patients available!!"+patients.size());
+        // if ( patientProvider.size() !=null)
+        // {
+        //     System.out.println("size of patients: "+patientProvider.size());
+        //     List<IBaseResource> patientList = patientProvider.getResources(0, patientProvider.size());
+        //     patientList.forEach(x -> patients.add((Patient) x));
+            
+        // }else{
+        //     System.out.println("No patients available!!")
+        // }  
+        return patients;      
     }
 
     public MeasureReport evaluatePopulationMeasure(Measure measure, Context context) {
@@ -113,7 +127,7 @@ public class MeasureEvaluation {
         }
         Object result = context.resolveExpressionRef(pop.getCriteria().getExpression()).evaluate(context);
         if (result == null) {
-            Collections.emptyList();
+            return Collections.emptyList();
         }
         
         if (result instanceof Boolean) {
