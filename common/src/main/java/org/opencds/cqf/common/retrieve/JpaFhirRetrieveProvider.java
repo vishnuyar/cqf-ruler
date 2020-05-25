@@ -24,7 +24,7 @@ import ca.uhn.fhir.util.BundleUtil;
 import ca.uhn.fhir.util.bundle.BundleEntryParts;
 
 public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
-
+    org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("searchparam");
     DaoRegistry registry;
     
     public static ThreadLocal<String> patient_fhir;
@@ -57,7 +57,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         IFhirResourceDao<?> dao = this.registry.getResourceDao(dataType);
         IBundleProvider bundleProvider = dao.search(map);
 
-        System.out.println("running Mapstring:" + dataType + map.toNormalizedQueryString(FhirContext.forR4()));
+        ourLog.info("running Mapstring:" + dataType + map.toNormalizedQueryString(FhirContext.forR4()));
         if (bundleProvider.size() == null) {
             return resolveResourceList(bundleProvider.getResources(0, 10000));
         }
@@ -70,7 +70,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
     public synchronized Collection<Object> resolveResourceList(List<IBaseResource> resourceList) {
         List<Object> ret = new ArrayList<>();
-        System.out.println("size is: " + resourceList.size());
+        ourLog.info("size is: " + resourceList.size());
         for (IBaseResource res : resourceList) {
             Class<?> clazz = res.getClass();
             ret.add(clazz.cast(res));
@@ -80,7 +80,9 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     }
 
     protected Collection<Object> executeQuery(String dataType, SearchParameterMap map) {
+        // ourLog.info("Starting query");
         IFhirResourceDao<?> dao = this.registry.getResourceDao(dataType);
+        
         FhirContext myFhirContext = FhirContext.forR4();
         boolean local = true;
         String purl = "";
@@ -98,7 +100,9 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             }
         }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
-        System.out.println("The query string is " + searchURL);
+        
+        // System.out.println("The query string is " + searchURL);
+        ourLog.info("The query string is " + dataType);
        
         IGenericClient client;
         List<IBaseResource> resourceList = new ArrayList<>();
@@ -123,13 +127,13 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
                 return resolveResourceList(bundleProvider.getResources(0, 10000));
             }
             if (bundleProvider.size() == 0) {
-                System.out.println("Empty data ");
+                ourLog.info("Empty data ");
                 return new ArrayList<>();
             }
             resourceList = bundleProvider.getResources(0, bundleProvider.size());
 
         }
-
+       // ourLog.info("Leaving query");
         return resolveResourceList(resourceList);
     }
 
