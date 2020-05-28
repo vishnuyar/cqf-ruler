@@ -1,6 +1,7 @@
 package org.opencds.cqf.r4.evaluation;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.lang3.tuple.Triple;
@@ -14,6 +15,8 @@ import org.opencds.cqf.cql.runtime.DateTime;
 import org.opencds.cqf.cql.runtime.Interval;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.common.helpers.UsingHelper;
@@ -31,6 +34,8 @@ public class MeasureEvaluationSeed
     private LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider;
     private EvaluationProviderFactory providerFactory;
     private DataProvider dataProvider;
+    private static final Logger logger = LoggerFactory.getLogger(MeasureEvaluationSeed.class);
+    public static HashMap<String,Library> libraryMap = new HashMap<>();
 
     public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
     {
@@ -44,14 +49,24 @@ public class MeasureEvaluationSeed
             String productLine, String source, String user, String pass)
     {
         this.measure = measure;
+        Library library = null;
+        
+        if (!libraryMap.containsKey(measure.getId())){
+            LibraryHelper.loadLibraries(measure, this.libraryLoader, this.libraryResourceProvider);
 
-        LibraryHelper.loadLibraries(measure, this.libraryLoader, this.libraryResourceProvider);
-
-        // resolve primary library
-        Library library = LibraryHelper.resolvePrimaryLibrary(measure, libraryLoader, this.libraryResourceProvider);
+            // resolve primary library
+            
+            library = LibraryHelper.resolvePrimaryLibrary(measure, libraryLoader, this.libraryResourceProvider);
+            libraryMap.put(measure.getId(),library);
+        }else{
+            library = libraryMap.get(measure.getId());
+        }
+       
 
         // resolve execution context
+        
         context = new Context(library);
+        
         context.registerLibraryLoader(libraryLoader);
 
         List<Triple<String,String,String>> usingDefs = UsingHelper.getUsingUrlAndVersion(library.getUsings());
@@ -71,10 +86,12 @@ public class MeasureEvaluationSeed
                         source, user, pass);
             context.registerTerminologyProvider(terminologyProvider);
         }
-
+        
         for (Triple<String,String,String> def : usingDefs)
         {
+            logger.info("get dataprovider");
             this.dataProvider = this.providerFactory.createDataProvider(def.getLeft(), def.getMiddle(), terminologyProvider);
+            logger.info("set context dataprovider");
             context.registerDataProvider(
                 def.getRight(), 
                 dataProvider);
@@ -82,9 +99,10 @@ public class MeasureEvaluationSeed
 
 
         // resolve the measurement period
+        logger.info("set interval");
         measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
                 DateHelper.resolveRequestDate(periodEnd, false), true);
-
+        logger.info("set measurement period");
         context.setParameter(null, "Measurement Period",
                 new Interval(DateTime.fromJavaDate((Date) measurementPeriod.getStart()), true,
                         DateTime.fromJavaDate((Date) measurementPeriod.getEnd()), true));
@@ -92,7 +110,7 @@ public class MeasureEvaluationSeed
         if (productLine != null) {
             context.setParameter(null, "Product Line", productLine);
         }
-
+        logger.info("seed setup complete");
         context.setExpressionCaching(true);
     }
 }
