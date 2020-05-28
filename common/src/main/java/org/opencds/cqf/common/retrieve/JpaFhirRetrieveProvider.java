@@ -102,7 +102,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
         
         // System.out.println("The query string is " + searchURL);
-        ourLog.info("The query string is " + dataType);
+        ourLog.info("The query string is " + dataType +searchURL);
        
         IGenericClient client;
         List<IBaseResource> resourceList = new ArrayList<>();
