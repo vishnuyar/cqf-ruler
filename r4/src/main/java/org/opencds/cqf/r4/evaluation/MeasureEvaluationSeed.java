@@ -61,6 +61,29 @@ public class MeasureEvaluationSeed
         }else{
             library = libraryMap.get(measure.getId());
         }
+        setupLibrary(
+             library,  periodStart,  periodEnd,
+             productLine,  source,  user,  pass);
+    }
+
+
+    public void setupLibrary(
+            String libraryName, String periodStart, String periodEnd,
+            String productLine, String source, String user, String pass)
+    {
+            Library library = LibraryHelper.resolveLibraryById(libraryName, libraryLoader, libraryResourceProvider);
+            setupLibrary(
+             library,  periodStart,  periodEnd,
+             productLine,  source,  user,  pass);
+    }
+
+
+
+    public void setupLibrary(
+            Library library, String periodStart, String periodEnd,
+            String productLine, String source, String user, String pass)
+    {
+        
        
 
         // resolve execution context
