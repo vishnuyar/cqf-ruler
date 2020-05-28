@@ -173,11 +173,15 @@ public class MeasureOperationsProvider {
             @OptionalParam(name = "lastReceivedOn") String lastReceivedOn,
             @OptionalParam(name = "source") String source, @OptionalParam(name = "user") String user,
             @OptionalParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
+
+        // logger.info("Starting evaluate");
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
+        // logger.info("library loading complete");
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
+        // logger.info("get measure dao");
         Measure measure = this.measureResourceProvider.getDao().read(theId);
-
+        // logger.info("measure dao available");
         if (measure == null) {
             throw new RuntimeException("Could not find Measure/" + theId.getIdPart());
         }
@@ -185,8 +189,10 @@ public class MeasureOperationsProvider {
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
 
         // resolve report type
+        // logger.info("create evaluator");
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                 seed.getMeasurementPeriod());
+        // logger.info("evaluator ready");
         if (reportType != null) {
             switch (reportType) {
                 case "patient":
@@ -208,7 +214,7 @@ public class MeasureOperationsProvider {
             ext.setValue(new StringType(productLine));
             report.addExtension(ext);
         }
-
+        // logger.info("Stopping evaluate");
         return report;
     }
 
@@ -244,6 +250,49 @@ public class MeasureOperationsProvider {
     // "");
     // }
 
+
+    /****
+     * 
+     * New operation being written to evaluate library with criteria
+     * 
+     */
+    @Operation(name = "$lib-evaluate", idempotent = true, type=Measure.class)
+    public Bundle librarysEvaluate(@RequiredParam(name = "libraryId") String libraryId,
+    @RequiredParam(name = "criteria") String criteria,
+    @RequiredParam(name = "subject") String patientRef,
+    @RequiredParam(name = "periodStart") String periodStart,
+    @OptionalParam(name = "periodEnd") String periodEnd,
+    @OptionalParam(name = "source") String source,
+    @OptionalParam(name = "user") String user,
+    @OptionalParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
+        logger.info("in the library evaluate function");
+        logger.info("library id: "+ libraryId);
+        Bundle res = new Bundle();
+        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
+        MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
+                this.libraryResolutionProvider);
+        
+
+        seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
+
+        MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
+        seed.getMeasurementPeriod());
+        for (Resource resource : evaluator.evaluateCqlExpression(seed.getContext(),patientRef,criteria)) {
+            res.addEntry(new Bundle.BundleEntryComponent().setResource(resource));
+        }
+        
+        
+        
+        
+        
+        
+        return res;
+    }
+
+    
+    
+    
+    
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Parameters careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
             @OptionalParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "topic") String topic,
@@ -251,7 +300,7 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "measure") String measureparam,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OperationParam(name = "status") String status) {
-    	
+    	// logger.info("Caregap starting");
         Parameters parameters = new Parameters();
 
         
@@ -286,17 +335,17 @@ public class MeasureOperationsProvider {
             if (valueCodingSearch) {
                 topicSearch = new SearchParameterMap().add("topic",
                         new TokenParam().setModifier(TokenParamModifier.valueOf("coding")).setValue(valueCode));
-                System.out.println("code search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
+                // logger.info("code search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
             } else {
                 topicSearch = new SearchParameterMap().add("topic",
                         new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic));
             }
 
-            System.out.println("Topic search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
+            // logger.info("Topic search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
             // add the search parametere to search for only activel measures
 
             topicSearch.add("status", new TokenParam().setValue("active"));
-            System.out.println("status search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
+            // logger.info("status search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
 
             
             IBundleProvider bundleProvider = this.measureResourceProvider.getDao().search(topicSearch);
@@ -305,7 +354,7 @@ public class MeasureOperationsProvider {
             	Measure res = (Measure)(iterator.next());
             	measures.add(res);
 			}
-            System.out.println("t: " + measures.size());
+            logger.info("t: " + measures.size());
 
         }
         if (measureparam != null) {
@@ -328,21 +377,27 @@ public class MeasureOperationsProvider {
         if (patientRef != null) {
         	patients.add(getPatients(patientRef));
         }
+        logger.info("get library loader");
+            LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
+            logger.info("get seed");
+            MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
+                    this.libraryResolutionProvider);
         for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
-            Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd);
+            Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd,seed);
             parameters.addParameter(
                 new Parameters.ParametersParameterComponent().setName("Care Gap Report for "+patient.getIdBase()).setResource(careGapBundle));
             //careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(careGapBundle));     
             
-		}
+        }
+        // logger.info("Leaving Caregap");
         return parameters;
 
        
     }
     
     private Bundle getCareGapReport(Patient patient, List<Measure> measures, String status,
-    		String periodStart, String periodEnd) {
+    		String periodStart, String periodEnd, MeasureEvaluationSeed seed) {
     	Bundle careGapReport = new Bundle();
         careGapReport.setType(Bundle.BundleType.DOCUMENT);
 
@@ -357,6 +412,7 @@ public class MeasureOperationsProvider {
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
+            logger.info("measure:"+measure.getId());
             Composition.SectionComponent section = new Composition.SectionComponent();        
             section.addEntry(new Reference(measure));
             if (measure.hasTitle()) {
@@ -370,22 +426,18 @@ public class MeasureOperationsProvider {
                 section.setText(new Narrative().setStatus(Narrative.NarrativeStatus.GENERATED)
                         .setDiv(new XhtmlNode().setValue(improvementNotation.getCodingFirstRep().getCode())));
             }
-
-            LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
-            MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
-                    this.libraryResolutionProvider);
+            
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                     seed.getMeasurementPeriod());
-            System.out.println("The patient: " + patient.getId());
+            logger.info("The patient: " + patient.getId());
             report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getId());
             reports.add(report);
             composition.addSection(section);
         }
 
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
-        System.out.println("The number of reports are " + reports.size());
-        System.out.println("Now add the measure report to care gap report");
+        logger.info("The number of reports are " + reports.size());
         // Add the reports based on status parameter
         boolean addreport;
         for (MeasureReport rep : reports) {
@@ -393,16 +445,13 @@ public class MeasureOperationsProvider {
                 addreport = false;
                 if (group.hasMeasureScore()) {
                     BigDecimal scorevalue = group.getMeasureScore().getValue();
-                    System.out.println("the measure score is " + scorevalue.toString());
-                    System.out.println("the status is " + status);
+                    logger.info("the measure score is " + scorevalue.toString());
+                    logger.info("the status is " + status);
                     if (status == null) {
-                        System.out.println("both gaps");
                         addreport = true;
                     } else if ((scorevalue.compareTo(new BigDecimal(1)) == 0) && status.equals("closed-gaps")) {
-                        System.out.println("closed gaps");
                         addreport = true;
                     } else if ((scorevalue.compareTo(new BigDecimal(0)) == 0) && status.equals("open-gaps")) {
-                        System.out.println("open gaps");
                         addreport = true;
 
                     } else {
