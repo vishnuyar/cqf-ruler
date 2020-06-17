@@ -8,6 +8,8 @@ import ca.uhn.fhir.rest.param.ReferenceParam;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
+import org.cqframework.cql.elm.execution.ExpressionDef;
+import org.cqframework.cql.elm.execution.Library;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.opencds.cqf.common.evaluation.MeasurePopulationType;
 import org.opencds.cqf.common.evaluation.MeasureScoring;
@@ -96,9 +98,51 @@ public class MeasureEvaluation {
         return evaluate(measure, context, getAllPatients(), MeasureReport.MeasureReportType.SUMMARY);
     }
 
-    public Iterable<Resource> evaluateCqlExpression(Context context, String patientId, String criteria) {
-        context.setContextValue("Patient", patientId);
 
+
+    public Parameters cqlEvaluate(Context context, String patientId, String criteria, Library lib){
+        Parameters parameters = new Parameters();
+        ArrayList<String> cqldef = new ArrayList<String>();
+        if (criteria.equals("EvaluateCQL")){
+            for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
+                System.out.println("Expression :" + expressionDef.getName());
+                cqldef.add(expressionDef.getName());
+            }
+        }else{
+            cqldef.add(criteria);
+            
+        }
+
+        for (String cqlcriteria : cqldef) {
+            Object cqlResult = evaluateCqlExpression(context,patientId,cqlcriteria);
+        
+            logger.info("Got result of type" +cqlResult.getClass().toString());
+            if (cqlResult instanceof ArrayList){
+                Bundle bundle = new Bundle();
+                for (Resource evalresource : (Iterable<Resource>)cqlResult) {
+                    bundle.addEntry(new Bundle.BundleEntryComponent().setResource(evalresource));
+                }
+                parameters.addParameter(
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(bundle));
+            }else if (cqlResult instanceof Resource){
+                Resource resultres = (Resource)cqlResult;
+                parameters.addParameter(
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(resultres));
+            }
+            else{
+                String singleValue = cqlResult.toString();
+                parameters.addParameter(cqlcriteria, singleValue);
+                
+            }
+            
+        }
+        
+
+        return parameters;
+    }
+
+    public Object evaluateCqlExpression(Context context, String patientId, String criteria) {
+        context.setContextValue("Patient", patientId);
         // Hack to clear expression cache
         // See cqf-ruler github issue #153
         try {
@@ -114,27 +158,18 @@ public class MeasureEvaluation {
 
         logger.info("Evaluating expression :" + criteria);
 
+        if(context.resolveExpressionRef(criteria) == null){
+            logger.info("resolve expression is null");
+        }
+
         Object result = context.resolveExpressionRef(criteria).evaluate(context);
         if (result == null) {
             return Collections.emptyList();
         }
+        System.out.println("not nullresult: "+result.toString());
+        
 
-        Iterable<Object> patientRetrieve = provider.retrieve("Patient", "id", patientId, "Patient", null, null, null,
-                null, null, null, null, null);
-        Patient patient = null;
-        if (patientRetrieve.iterator().hasNext()) {
-            patient = (Patient) patientRetrieve.iterator().next();
-        }
-        if (result instanceof Boolean) {
-            if (((Boolean) result)) {
-
-                return Collections.singletonList(patient);
-            } else {
-                return Collections.emptyList();
-            }
-        }
-
-        return (Iterable) result;
+        return result;
 
     }
 
@@ -146,7 +181,18 @@ public class MeasureEvaluation {
         String expression = pop.getCriteria().getExpression();
         String patientId = patient.getIdElement().getIdPart();
 
-        return evaluateCqlExpression(context, patientId, expression);
+        Object result = evaluateCqlExpression(context, patientId, expression);
+        
+        if (result instanceof Boolean) {
+            if (((Boolean) result)) {
+
+                return Collections.singletonList(patient);
+            } else {
+                return Collections.emptyList();
+            }
+        }
+
+        return (Iterable)result;
 
     }
 
