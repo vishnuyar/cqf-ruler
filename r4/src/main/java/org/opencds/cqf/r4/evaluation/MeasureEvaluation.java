@@ -105,8 +105,12 @@ public class MeasureEvaluation {
         ArrayList<String> cqldef = new ArrayList<String>();
         if (criteria.equals("EvaluateCQL")){
             for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
+                System.out.println("Expression Type :" + expressionDef.getClass().getName());
                 System.out.println("Expression :" + expressionDef.getName());
-                cqldef.add(expressionDef.getName());
+                if (!(expressionDef instanceof org.cqframework.cql.elm.execution.FunctionDef)){
+                    cqldef.add(expressionDef.getName());
+                }
+                
             }
         }else{
             cqldef.add(criteria);
@@ -145,16 +149,16 @@ public class MeasureEvaluation {
         context.setContextValue("Patient", patientId);
         // Hack to clear expression cache
         // See cqf-ruler github issue #153
-        try {
-            Field privateField = Context.class.getDeclaredField("expressions");
-            privateField.setAccessible(true);
-            LinkedHashMap<String, Object> expressions = (LinkedHashMap<String, Object>) privateField.get(context);
-            expressions.clear();
+        // try {
+        //     Field privateField = Context.class.getDeclaredField("expressions");
+        //     privateField.setAccessible(true);
+        //     LinkedHashMap<String, Object> expressions = (LinkedHashMap<String, Object>) privateField.get(context);
+        //     expressions.clear();
 
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        // } catch (Exception e) {
+        //     // TODO Auto-generated catch block
+        //     e.printStackTrace();
+        // }
 
         logger.info("Evaluating expression :" + criteria);
 
