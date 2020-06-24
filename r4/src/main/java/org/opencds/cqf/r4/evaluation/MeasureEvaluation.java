@@ -121,13 +121,27 @@ public class MeasureEvaluation {
             Object cqlResult = evaluateCqlExpression(context,patientId,cqlcriteria);
         
             logger.info("Got result of type" +cqlResult.getClass().toString());
+            
             if (cqlResult instanceof ArrayList){
+                Boolean isResource = false;
                 Bundle bundle = new Bundle();
-                for (Resource evalresource : (Iterable<Resource>)cqlResult) {
-                    bundle.addEntry(new Bundle.BundleEntryComponent().setResource(evalresource));
+                ArrayList<String> arrayValues = new ArrayList<>();
+                for (Object obj: (Iterable<Object>)cqlResult){
+                    if (obj instanceof Resource){
+                        isResource = true;
+                        bundle.addEntry(new Bundle.BundleEntryComponent().setResource((Resource)obj));
+                    }else{
+                        arrayValues.add(obj.toString());
+                    }
                 }
-                parameters.addParameter(
+                
+                if(isResource){
+                    parameters.addParameter(
                     new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(bundle));
+                }else{
+                    parameters.addParameter(cqlcriteria, String.join(",", arrayValues));
+                }
+                
             }else if (cqlResult instanceof Resource){
                 Resource resultres = (Resource)cqlResult;
                 parameters.addParameter(

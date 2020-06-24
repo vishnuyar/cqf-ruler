@@ -36,7 +36,7 @@ public class MeasureEvaluationSeed
     private DataProvider dataProvider;
     private static final Logger logger = LoggerFactory.getLogger(MeasureEvaluationSeed.class);
     public static HashMap<String,Library> libraryMap = new HashMap<>();
-    public Library library = null;
+    private Library library = null;
 
     public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
     {
