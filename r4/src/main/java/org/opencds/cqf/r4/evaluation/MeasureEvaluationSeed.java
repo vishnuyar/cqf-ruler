@@ -36,6 +36,7 @@ public class MeasureEvaluationSeed
     private DataProvider dataProvider;
     private static final Logger logger = LoggerFactory.getLogger(MeasureEvaluationSeed.class);
     public static HashMap<String,Library> libraryMap = new HashMap<>();
+    public Library library = null;
 
     public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
     {
@@ -49,17 +50,16 @@ public class MeasureEvaluationSeed
             String productLine, String source, String user, String pass)
     {
         this.measure = measure;
-        Library library = null;
         
         if (!libraryMap.containsKey(measure.getId())){
             LibraryHelper.loadLibraries(measure, this.libraryLoader, this.libraryResourceProvider);
 
             // resolve primary library
             
-            library = LibraryHelper.resolvePrimaryLibrary(measure, libraryLoader, this.libraryResourceProvider);
-            libraryMap.put(measure.getId(),library);
+            this.library = LibraryHelper.resolvePrimaryLibrary(measure, libraryLoader, this.libraryResourceProvider);
+            libraryMap.put(measure.getId(),this.library);
         }else{
-            library = libraryMap.get(measure.getId());
+            this.library = libraryMap.get(measure.getId());
         }
         setupLibrary(
              library,  periodStart,  periodEnd,
@@ -71,13 +71,15 @@ public class MeasureEvaluationSeed
             String libraryName, String periodStart, String periodEnd,
             String productLine, String source, String user, String pass)
     {
-            Library library = LibraryHelper.resolveLibraryById(libraryName, libraryLoader, libraryResourceProvider);
+             this.library = LibraryHelper.resolveLibraryById(libraryName, libraryLoader, libraryResourceProvider);
             setupLibrary(
-             library,  periodStart,  periodEnd,
+             this.library,  periodStart,  periodEnd,
              productLine,  source,  user,  pass);
     }
 
-
+    public Library getLibrary(){
+        return this.library;
+    }
 
     public void setupLibrary(
             Library library, String periodStart, String periodEnd,
@@ -87,7 +89,7 @@ public class MeasureEvaluationSeed
        
 
         // resolve execution context
-        
+        this.library = library;
         context = new Context(library);
         
         context.registerLibraryLoader(libraryLoader);

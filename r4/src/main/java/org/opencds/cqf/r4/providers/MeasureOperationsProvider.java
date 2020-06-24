@@ -10,10 +10,12 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.DeviceRequest;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Group;
 import org.hl7.fhir.r4.model.IdType;
@@ -27,7 +29,9 @@ import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.StringType;
+import org.cqframework.cql.elm.execution.Library;
 import org.hl7.fhir.MeasureScoring;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
@@ -37,6 +41,7 @@ import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import org.opencds.cqf.cql.execution.Context;
 import org.opencds.cqf.cql.execution.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
 import org.opencds.cqf.measure.r4.CqfMeasure;
@@ -256,37 +261,48 @@ public class MeasureOperationsProvider {
      * New operation being written to evaluate library with criteria
      * 
      */
+    
     @Operation(name = "$lib-evaluate", idempotent = true, type=Measure.class)
-    public Bundle librarysEvaluate(@RequiredParam(name = "libraryId") String libraryId,
-    @RequiredParam(name = "criteria") String criteria,
-    @RequiredParam(name = "subject") String patientRef,
-    @RequiredParam(name = "periodStart") String periodStart,
-    @OptionalParam(name = "periodEnd") String periodEnd,
-    @OptionalParam(name = "source") String source,
-    @OptionalParam(name = "user") String user,
-    @OptionalParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
+    public Parameters libraryEvaluate(
+    @OperationParam(name = "libraryId") String libraryId,
+    @OperationParam(name = "criteria") String criteria,
+    @OperationParam(name = "subject") String patientRef,
+    @OperationParam(name = "periodStart") String periodStart,
+    @OperationParam(name = "periodEnd") String periodEnd,
+    @OperationParam(name = "source") String source,
+    @OperationParam(name = "serviceRequest", min = 1, max = 1, type = ServiceRequest.class) ServiceRequest serviceRequest,
+    @OperationParam(name = "deviceRequest", min = 1, max = 1, type = DeviceRequest.class) DeviceRequest deviceRequest,
+    @OperationParam(name = "user") String user,
+    @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
         logger.info("in the library evaluate function");
         logger.info("library id: "+ libraryId);
-        Bundle res = new Bundle();
+        logger.info("criteria:"+criteria);
+        logger.info("periodStart:"+periodStart);
+        logger.info("patientRef:"+patientRef);
+        
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
         
 
         seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
+        
 
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
         seed.getMeasurementPeriod());
-        for (Resource resource : evaluator.evaluateCqlExpression(seed.getContext(),patientRef,criteria)) {
-            res.addEntry(new Bundle.BundleEntryComponent().setResource(resource));
+        // Add the type of Request
+        Context context = seed.getContext();
+        Library library = seed.getLibrary();
+        if(serviceRequest != null){
+            context.setParameter(null, "ServiceRequest", serviceRequest);
+        }
+        if(deviceRequest != null){
+            context.setParameter(null, "DeviceRequest", deviceRequest);
         }
         
+        Parameters result = evaluator.cqlEvaluate(context, patientRef, criteria,library);
         
-        
-        
-        
-        
-        return res;
+        return result;
     }
 
     

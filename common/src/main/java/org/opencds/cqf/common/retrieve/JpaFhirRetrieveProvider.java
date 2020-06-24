@@ -26,7 +26,7 @@ import ca.uhn.fhir.util.bundle.BundleEntryParts;
 public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("searchparam");
     DaoRegistry registry;
-    
+    HashMap<String,Collection<Object>>cacheQueries;
     public static ThreadLocal<String> patient_fhir;
     
     static {
@@ -37,6 +37,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     public JpaFhirRetrieveProvider(DaoRegistry registry, SearchParameterResolver searchParameterResolver) {
         super(searchParameterResolver);
         this.registry = registry;
+        cacheQueries = new HashMap<>();
     }
 
     @Override
@@ -100,9 +101,12 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             }
         }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
-        
+        if(cacheQueries.containsKey(searchURL)){
+            ourLog.info("Retrieving from cache : "+searchURL);
+            return cacheQueries.get(searchURL);
+        }
         // System.out.println("The query string is " + searchURL);
-        ourLog.info("The query string is " + dataType +searchURL);
+        ourLog.info("The query string is "  + searchURL);
        
         IGenericClient client;
         List<IBaseResource> resourceList = new ArrayList<>();
@@ -124,17 +128,24 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         else {
             IBundleProvider bundleProvider = dao.search(map);
             if (bundleProvider.size() == null) {
-                return resolveResourceList(bundleProvider.getResources(0, 10000));
+                ourLog.info("Caching : "+searchURL);
+                Collection<Object> queryResult = resolveResourceList(bundleProvider.getResources(0, 10000));
+                //cacheQueries.put(searchURL,queryResult);
+                return queryResult;
             }
             if (bundleProvider.size() == 0) {
                 ourLog.info("Empty data ");
+                //cacheQueries.put(searchURL,new ArrayList<>());
                 return new ArrayList<>();
             }
             resourceList = bundleProvider.getResources(0, bundleProvider.size());
 
         }
        // ourLog.info("Leaving query");
-        return resolveResourceList(resourceList);
+       Collection<Object> queryResult = resolveResourceList(resourceList);
+       ourLog.info("Caching : "+searchURL);
+       //cacheQueries.put(searchURL,queryResult);
+        return queryResult;
     }
 
 }
