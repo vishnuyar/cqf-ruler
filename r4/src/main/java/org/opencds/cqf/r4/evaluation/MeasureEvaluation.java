@@ -151,7 +151,7 @@ public class MeasureEvaluation {
                 parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
                 
             }else {
-                parameters.addParameter(cqlcriteria, (String)cqlResult);
+                parameters.addParameter(cqlcriteria, cqlResult.toString());
                 
             }
             
