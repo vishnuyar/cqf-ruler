@@ -97,7 +97,8 @@ public class ClaimProvider extends ClaimResourceProvider{
             URL url = new URL(HapiProperties.getProperty("x12_check_url"));
             byte[] postDataBytes = x12_generated.getBytes("UTF-8");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestProperty("x-api-key", "CXES5OZC0S5RUGMphrOpB75wQjk1ZiGD48OWlTDD");
+            System.out.println("KEY: "+HapiProperties.getProperty("x12_api_key"));
+            conn.setRequestProperty("x-api-key",HapiProperties.getProperty("x12_api_key") );
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "text/plain");
             conn.setRequestProperty("Accept", "text/plain");
@@ -143,7 +144,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 	            URL url = new URL(HapiProperties.getProperty("x12_generator_url"));
 	            byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 	            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-	            conn.setRequestProperty("x-api-key", "CXES5OZC0S5RUGMphrOpB75wQjk1ZiGD48OWlTDD");
+	            conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_api_key"));
 	            conn.setRequestMethod("POST");
 	            conn.setRequestProperty("Content-Type", "application/json");
 	            conn.setRequestProperty("Accept", "application/json");
@@ -283,46 +284,55 @@ public class ClaimProvider extends ClaimResourceProvider{
 	    	ClaimResponse retVal = generateClaimResponse(patient, claim);
 	    	IParser jsonParser = details.getFhirContext().newJsonParser();
             String jsonStr = jsonParser.encodeResourceToString(bundle);
-	    	String x12_generated =  generateX12( jsonStr, bundle);
-	    	
-	    	
-	    	if(this.errors.length() > 0) {
-	    		retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-	    		retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-	    		List<ErrorComponent> errorList= new ArrayList<ErrorComponent>();
-	    		for(int i=0;i<this.errors.length();i++) {
-	    			JSONObject errorObj = new JSONObject(this.errors.get(i).toString());
-	    			System.out.println("errorObj: "+errorObj);
-	    			String code = errorObj.getString("code");
-	    			String message = errorObj.getString("message");
-	    			errorList.add(this.generateErrorComponent(code,message));	    			
-	    			
-	    		}
-	    		retVal.setError(errorList);
-	    	}
-	    	else {
-	    		String x12_response = submitX12( x12_generated, retVal, jsonStr);
-		    	retVal = updateClaimResponse(retVal,x12_response);
-	            System.out.println("----------X12 Generated--------- \n");
-	            System.out.println(x12_response);
-	            System.out.println("\n------------------- \n");
-	    	}
-	    	
-            DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(retVal);
-            ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
-            Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
-            responseBundle.addEntry(transactionEntry);
-            DaoMethodOutcome bundleOutcome = this.bundleDao.create(collectionBundle);
-            createdBundle = (Bundle) bundleOutcome.getResource();
-            for (Bundle.BundleEntryComponent entry : createdBundle.getEntry()) {
-                responseBundle.addEntry(entry);
+            if(!HapiProperties.getProperty("x12_api_key").equals("")) {
+            	String x12_generated =  generateX12( jsonStr, bundle);
+    	    	
+    	    	
+    	    	if(this.errors.length() > 0) {
+    	    		retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+    	    		retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
+    	    		List<ErrorComponent> errorList= new ArrayList<ErrorComponent>();
+    	    		for(int i=0;i<this.errors.length();i++) {
+    	    			JSONObject errorObj = new JSONObject(this.errors.get(i).toString());
+    	    			System.out.println("errorObj: "+errorObj);
+    	    			String code = errorObj.getString("code");
+    	    			String message = errorObj.getString("message");
+    	    			errorList.add(this.generateErrorComponent(code,message));	    			
+    	    			
+    	    		}
+    	    		retVal.setError(errorList);
+    	    	}
+    	    	else {
+    	    		String x12_response = submitX12( x12_generated, retVal, jsonStr);
+    		    	retVal = updateClaimResponse(retVal,x12_response);
+    	            System.out.println("----------X12 Generated--------- \n");
+    	            System.out.println(x12_response);
+    	            System.out.println("\n------------------- \n");
+    	    	}
+    	    	
+                DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(retVal);
+                ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
+                Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
+                responseBundle.addEntry(transactionEntry);
+                DaoMethodOutcome bundleOutcome = this.bundleDao.create(collectionBundle);
+                createdBundle = (Bundle) bundleOutcome.getResource();
+                for (Bundle.BundleEntryComponent entry : createdBundle.getEntry()) {
+                    responseBundle.addEntry(entry);
+                }
+                responseBundle.setId(createdBundle.getId());
             }
-            responseBundle.setId(createdBundle.getId());
+            else {
+            	throw new RuntimeException("API key needs to be configured for requesting X12 server");
+            }
             responseBundle.setType(Bundle.BundleType.COLLECTION);
             return responseBundle;
 
 
-        } catch (Exception ex) {
+        }
+        catch(RuntimeException re) {
+        	throw re;
+        }
+        catch (Exception ex) {
             ex.printStackTrace();
             throw new RuntimeException(ex.getLocalizedMessage());
         }
