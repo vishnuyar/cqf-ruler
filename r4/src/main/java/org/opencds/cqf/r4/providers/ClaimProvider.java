@@ -54,6 +54,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.opencds.cqf.common.config.HapiProperties;
 
 public class ClaimProvider extends ClaimResourceProvider{
 	
@@ -92,7 +93,8 @@ public class ClaimProvider extends ClaimResourceProvider{
 		try {
             // POST call for token
 			StringBuilder sb = new StringBuilder();
-            URL url = new URL("https://sm.mettles.com/x12/x12check");
+			
+            URL url = new URL(HapiProperties.getProperty("x12_check_url"));
             byte[] postDataBytes = x12_generated.getBytes("UTF-8");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestProperty("x-api-key", "CXES5OZC0S5RUGMphrOpB75wQjk1ZiGD48OWlTDD");
@@ -138,7 +140,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 //	            System.out.println("JSON:\n" + jsonStr);
 	            StringBuilder sb = new StringBuilder();
 	            String str_result = "";
-	            URL url = new URL("https://2dvecqthc5.execute-api.us-east-2.amazonaws.com/default/x12_lambda");
+	            URL url = new URL(HapiProperties.getProperty("x12_generator_url"));
 	            byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 	            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 	            conn.setRequestProperty("x-api-key", "CXES5OZC0S5RUGMphrOpB75wQjk1ZiGD48OWlTDD");
@@ -285,6 +287,8 @@ public class ClaimProvider extends ClaimResourceProvider{
 	    	
 	    	
 	    	if(this.errors.length() > 0) {
+	    		retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+	    		retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
 	    		List<ErrorComponent> errorList= new ArrayList<ErrorComponent>();
 	    		for(int i=0;i<this.errors.length();i++) {
 	    			JSONObject errorObj = new JSONObject(this.errors.get(i).toString());
@@ -337,7 +341,8 @@ public class ClaimProvider extends ClaimResourceProvider{
 			
 			
 			if(x12.toLowerCase().contains("error")) {
-				
+				claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
 				ArrayList<ErrorComponent> ErrList = new ArrayList<ErrorComponent>();
 				ErrList.add(this.generateErrorComponent("400", x12));
 				System.out.println(ErrList.size());
