@@ -147,9 +147,11 @@ public class MeasureEvaluation {
                 parameters.addParameter(
                     new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(resultres));
             }
-            else{
-                String singleValue = cqlResult.toString();
-                parameters.addParameter(cqlcriteria, singleValue);
+            else if(cqlResult instanceof Boolean){
+                parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
+                
+            }else {
+                parameters.addParameter(cqlcriteria, (String)cqlResult);
                 
             }
             
