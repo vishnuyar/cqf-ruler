@@ -120,7 +120,7 @@ public class MeasureEvaluation {
         for (String cqlcriteria : cqldef) {
             Object cqlResult = evaluateCqlExpression(context,patientId,cqlcriteria);
         
-            logger.info("Got result of type" +cqlResult.getClass().toString());
+            logger.info("Got result of type: " +cqlResult.getClass());
             
             if (cqlResult instanceof ArrayList){
                 Boolean isResource = false;
@@ -166,16 +166,25 @@ public class MeasureEvaluation {
             else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Quantity){
                 org.opencds.cqf.cql.runtime.Quantity qty = (org.opencds.cqf.cql.runtime.Quantity)cqlResult;
                 Quantity quantity = new Quantity();
-                System.out.println("Found Quanity ");
-                parameters.addParameter(cqlcriteria, cqlResult.toString());
+                quantity.setUnit(qty.getUnit());
+                quantity.setValue(qty.getValue());
+                Parameters.ParametersParameterComponent pc = 
+                new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                pc.setValue(quantity);
+                parameters.addParameter(pc);
+                System.out.println("casting to Quantity"+quantity);
 
             }else if(cqlResult instanceof HumanName){
                 HumanName name = (HumanName)cqlResult;
                 parameters.addParameter(cqlcriteria, name.getNameAsSingleString());
             }
+            else if(cqlResult instanceof Collections){
+                System.out.println("Collection list type");
+                parameters.addParameter(cqlcriteria, "");
+            }
             else {
                 System.out.println("Final no cast available");
-                parameters.addParameter(cqlcriteria, cqlResult.toString());
+                parameters.addParameter(cqlcriteria, (String)cqlResult);
                 
             }
             
