@@ -184,7 +184,7 @@ public class MeasureEvaluation {
             }
             else {
                 System.out.println("Final no cast available");
-                parameters.addParameter(cqlcriteria, (String)cqlResult);
+                parameters.addParameter(cqlcriteria, cqlResult.toString());
                 
             }
             
