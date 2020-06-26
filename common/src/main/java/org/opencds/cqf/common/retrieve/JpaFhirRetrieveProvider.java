@@ -112,8 +112,8 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         if (!local) {
 
             client = FhirContext.forR4().newRestfulGenericClient(purl);
-            String maxCount = "_count=200";
-            searchURL +=maxCount;
+            //String maxCount = "_count=200";
+            //searchURL +=maxCount;
             
             while(searchURL != null) {
                 IBaseBundle bundle = client.search().byUrl(searchURL)
