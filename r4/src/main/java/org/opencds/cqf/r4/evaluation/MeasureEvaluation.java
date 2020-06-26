@@ -150,7 +150,31 @@ public class MeasureEvaluation {
             else if(cqlResult instanceof Boolean){
                 parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
                 
-            }else {
+            }if(cqlResult instanceof org.opencds.cqf.cql.runtime.Code){
+                
+                CodeType codeType = new CodeType();
+                org.opencds.cqf.cql.runtime.Code code = (org.opencds.cqf.cql.runtime.Code)cqlResult;
+                codeType.setSystem(code.getSystem());
+                codeType.setValue(code.getCode());
+                
+                Parameters.ParametersParameterComponent pc = 
+                new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                pc.setValue(codeType);
+                parameters.addParameter(pc);
+                System.out.println("casting to Code"+code.getSystem());
+            }//parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
+            else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Quantity){
+                org.opencds.cqf.cql.runtime.Quantity qty = (org.opencds.cqf.cql.runtime.Quantity)cqlResult;
+                Quantity quantity = new Quantity();
+                System.out.println("Found Quanity ");
+                parameters.addParameter(cqlcriteria, cqlResult.toString());
+
+            }else if(cqlResult instanceof HumanName){
+                HumanName name = (HumanName)cqlResult;
+                parameters.addParameter(cqlcriteria, name.getNameAsSingleString());
+            }
+            else {
+                System.out.println("Final no cast available");
                 parameters.addParameter(cqlcriteria, cqlResult.toString());
                 
             }

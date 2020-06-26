@@ -119,9 +119,12 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
                 IBaseBundle bundle = client.search().byUrl(searchURL)
                         .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
                 List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
-                for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
-                    BundleEntryParts next = iterator.next();
-                    resourceList.add(next.getResource());
+                if (parts.size() > 0){
+                    for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
+                        BundleEntryParts next = iterator.next();
+                        resourceList.add(next.getResource());
+                    }
+                    
                 }
                 searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
                 System.out.println("next: "+searchURL);
