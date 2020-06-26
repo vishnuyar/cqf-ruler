@@ -26,12 +26,12 @@ import ca.uhn.fhir.util.bundle.BundleEntryParts;
 public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("searchparam");
     DaoRegistry registry;
-    HashMap<String,Collection<Object>>cacheQueries;
+    HashMap<String, Collection<Object>> cacheQueries;
     public static ThreadLocal<String> patient_fhir;
-    
+
     static {
         patient_fhir = new ThreadLocal<String>();
-    	patient_fhir.set("");
+        patient_fhir.set("");
     }
 
     public JpaFhirRetrieveProvider(DaoRegistry registry, SearchParameterResolver searchParameterResolver) {
@@ -83,44 +83,51 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     protected Collection<Object> executeQuery(String dataType, SearchParameterMap map) {
         // ourLog.info("Starting query");
         IFhirResourceDao<?> dao = this.registry.getResourceDao(dataType);
-        
+
         FhirContext myFhirContext = FhirContext.forR4();
         boolean local = true;
         String purl = "";
         if (HapiProperties.getProperties().containsKey("patient_server_url")) {
             local = false;
-            
+
             purl = HapiProperties.getProperties().getProperty("patient_server_url");
         }
         if (patient_fhir.get() != null) {
 
-            
             if (!patient_fhir.get().equals("")) {
                 local = false;
                 purl = patient_fhir.get();
             }
         }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
-        if(cacheQueries.containsKey(searchURL)){
-            ourLog.info("Retrieving from cache : "+searchURL);
+        if (cacheQueries.containsKey(searchURL)) {
+            ourLog.info("Retrieving from cache : " + searchURL);
             return cacheQueries.get(searchURL);
         }
         // System.out.println("The query string is " + searchURL);
-        ourLog.info("The query string is "  + searchURL);
-       
+        ourLog.info("The query string is " + searchURL);
+
         IGenericClient client;
         List<IBaseResource> resourceList = new ArrayList<>();
         if (!local) {
-            
-            client = FhirContext.forR4().newRestfulGenericClient(purl);
 
-            IBaseBundle bundle = client.search().byUrl(searchURL)
-                    .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
-            List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
-            for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
-                BundleEntryParts next = iterator.next();
-                resourceList.add(next.getResource());
+            client = FhirContext.forR4().newRestfulGenericClient(purl);
+            String maxCount = "_count=200";
+            searchURL +=maxCount;
+            
+            while(searchURL != null) {
+                IBaseBundle bundle = client.search().byUrl(searchURL)
+                        .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
+                List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
+                for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
+                    BundleEntryParts next = iterator.next();
+                    resourceList.add(next.getResource());
+                }
+                searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
+                System.out.println("next: "+searchURL);
+                
             }
+
         }
         // IGenericClient client = FhirContext.forR4()
         // .newRestfulGenericClient("http://localhost:9999/hapi-fhir-jpaserver/fhir");
@@ -128,23 +135,23 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         else {
             IBundleProvider bundleProvider = dao.search(map);
             if (bundleProvider.size() == null) {
-                ourLog.info("Caching : "+searchURL);
+                ourLog.info("Caching : " + searchURL);
                 Collection<Object> queryResult = resolveResourceList(bundleProvider.getResources(0, 10000));
-                //cacheQueries.put(searchURL,queryResult);
+                // cacheQueries.put(searchURL,queryResult);
                 return queryResult;
             }
             if (bundleProvider.size() == 0) {
                 ourLog.info("Empty data ");
-                //cacheQueries.put(searchURL,new ArrayList<>());
+                // cacheQueries.put(searchURL,new ArrayList<>());
                 return new ArrayList<>();
             }
             resourceList = bundleProvider.getResources(0, bundleProvider.size());
 
         }
-       // ourLog.info("Leaving query");
-       Collection<Object> queryResult = resolveResourceList(resourceList);
-       ourLog.info("Caching : "+searchURL);
-       //cacheQueries.put(searchURL,queryResult);
+        // ourLog.info("Leaving query");
+        Collection<Object> queryResult = resolveResourceList(resourceList);
+        ourLog.info("Caching : " + searchURL);
+        // cacheQueries.put(searchURL,queryResult);
         return queryResult;
     }
 
