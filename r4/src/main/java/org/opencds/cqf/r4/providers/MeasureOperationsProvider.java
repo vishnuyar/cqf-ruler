@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Composition;
@@ -272,6 +273,7 @@ public class MeasureOperationsProvider {
     @OperationParam(name = "source") String source,
     @OperationParam(name = "serviceRequest", min = 1, max = 1, type = ServiceRequest.class) ServiceRequest serviceRequest,
     @OperationParam(name = "deviceRequest", min = 1, max = 1, type = DeviceRequest.class) DeviceRequest deviceRequest,
+    @OperationParam(name = "claim", min = 1, max = 1, type = Claim.class) Claim claim,
     @OperationParam(name = "user") String user,
     @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
         logger.info("in the library evaluate function");
@@ -298,6 +300,9 @@ public class MeasureOperationsProvider {
         }
         if(deviceRequest != null){
             context.setParameter(null, "DeviceRequest", deviceRequest);
+        }
+        if(claim != null){
+            context.setParameter(null, "Claim", claim);
         }
         
         Parameters result = evaluator.cqlEvaluate(context, patientRef, criteria,library);
