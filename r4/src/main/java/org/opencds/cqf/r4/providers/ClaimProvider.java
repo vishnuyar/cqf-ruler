@@ -88,7 +88,7 @@ public class ClaimProvider extends ClaimResourceProvider{
     }
 	
 	
-	private String submitX12(String x12_generated,ClaimResponse claimResponse,String bundleJson) {
+	private String submitX12(String x12_generated,ClaimResponse claimResponse) {
 		String str_result = "";
 		try {
             // POST call for token
@@ -135,10 +135,11 @@ public class ClaimProvider extends ClaimResourceProvider{
 		return  str_result;
 	}
 	
-	private String generateX12(String jsonStr,Bundle bundle) {
+	private String generateX12(String jsonStr) {
 		String x12_generated = "";
 		try {
 //	            System.out.println("JSON:\n" + jsonStr);
+				
 	            StringBuilder sb = new StringBuilder();
 	            String str_result = "";
 	            URL url = new URL(HapiProperties.getProperty("x12_generator_url"));
@@ -157,6 +158,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 		            while ((line = in.readLine()) != null) {
 		                sb.append(line);
 		            }
+		            x12_generated = sb.toString();
 	            }
 	            else {
 	            	BufferedReader in = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"));
@@ -164,18 +166,13 @@ public class ClaimProvider extends ClaimResourceProvider{
 		            while ((line = in.readLine()) != null) {
 		                sb.append(line);
 		            }
+		            JSONObject response = new JSONObject(sb.toString());
+		            this.errors = response.getJSONArray("errors");
 	            }
 	            
-	            
-	            System.out.println("RES:"+sb.toString());
-	            JSONObject response = new JSONObject(sb.toString());
-	            if(response.get("status").equals("success")) {
-	            	x12_generated = response.getString("data");
-	            }
-	            else {
-	            	this.errors = response.getJSONArray("errors");
-	            	System.out.println("Errors:"+errors);
-	            }
+	           
+	            System.out.println("Errors:"+errors);
+	     
 	            System.out.println("\n x12_generated :"+x12_generated);
 	        }
 		    catch (Exception ex) {
@@ -249,6 +246,7 @@ public class ClaimProvider extends ClaimResourceProvider{
             @OperationParam(name = "claim", min = 1, max = 1, type = Bundle.class) Bundle bundle)
             throws RuntimeException {
     	this.errors = new JSONArray();
+    	
         Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.COLLECTION);
         Bundle responseBundle = new Bundle();
         Bundle createdBundle = new Bundle();
@@ -280,14 +278,11 @@ public class ClaimProvider extends ClaimResourceProvider{
         }
 
         try {
-
 	    	ClaimResponse retVal = generateClaimResponse(patient, claim);
-	    	IParser jsonParser = details.getFhirContext().newJsonParser();
-            String jsonStr = jsonParser.encodeResourceToString(bundle);
             if(!HapiProperties.getProperty("x12_api_key").equals("")) {
-            	String x12_generated =  generateX12( jsonStr, bundle);
-    	    	
-    	    	
+            	IParser jsonParser = details.getFhirContext().newJsonParser();
+				String jsonStr = jsonParser.encodeResourceToString(bundle);
+            	String x12_generated =  generateX12(jsonStr);
     	    	if(this.errors.length() > 0) {
     	    		retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
     	    		retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
@@ -303,13 +298,12 @@ public class ClaimProvider extends ClaimResourceProvider{
     	    		retVal.setError(errorList);
     	    	}
     	    	else {
-    	    		String x12_response = submitX12( x12_generated, retVal, jsonStr);
+    	    		String x12_response = submitX12( x12_generated, retVal);
     		    	retVal = updateClaimResponse(retVal,x12_response);
     	            System.out.println("----------X12 Generated--------- \n");
     	            System.out.println(x12_response);
     	            System.out.println("\n------------------- \n");
     	    	}
-    	    	
                 DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(retVal);
                 ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
                 Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
