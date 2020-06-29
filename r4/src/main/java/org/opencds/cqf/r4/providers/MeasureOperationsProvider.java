@@ -271,10 +271,8 @@ public class MeasureOperationsProvider {
     @OperationParam(name = "periodStart") String periodStart,
     @OperationParam(name = "periodEnd") String periodEnd,
     @OperationParam(name = "source") String source,
-    @OperationParam(name = "serviceRequest", min = 1, max = 1, type = ServiceRequest.class) ServiceRequest serviceRequest,
-    @OperationParam(name = "deviceRequest", min = 1, max = 1, type = DeviceRequest.class) DeviceRequest deviceRequest,
-    @OperationParam(name = "claim", min = 1, max = 1, type = Claim.class) Claim claim,
     @OperationParam(name = "user") String user,
+    @OperationParam(name = "parameters") Parameters parameters,
     @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
         logger.info("in the library evaluate function");
         logger.info("library id: "+ libraryId);
@@ -295,14 +293,14 @@ public class MeasureOperationsProvider {
         // Add the type of Request
         Context context = seed.getContext();
         Library library = seed.getLibrary();
-        if(serviceRequest != null){
-            context.setParameter(null, "ServiceRequest", serviceRequest);
-        }
-        if(deviceRequest != null){
-            context.setParameter(null, "DeviceRequest", deviceRequest);
-        }
-        if(claim != null){
-            context.setParameter(null, "Claim", claim);
+        if (parameters != null)
+        {
+            for (Parameters.ParametersParameterComponent pc : parameters.getParameter())
+            {
+                System.out.println("PC name: " + pc.getName());
+                System.out.println("PC resource: " + pc.getResource());
+                context.setParameter(null, pc.getName(), pc.getResource());
+            }    
         }
         
         Parameters result = evaluator.cqlEvaluate(context, patientRef, criteria,library);
