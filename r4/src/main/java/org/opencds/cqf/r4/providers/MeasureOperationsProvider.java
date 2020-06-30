@@ -302,9 +302,17 @@ public class MeasureOperationsProvider {
                 context.setParameter(null, pc.getName(), pc.getResource());
             }    
         }
-        
-        Parameters result = evaluator.cqlEvaluate(context, patientRef, criteria,library);
-        
+        Parameters result = new Parameters();
+        try{
+
+             result = evaluator.cqlEvaluate(context, patientRef, criteria,library);
+            
+        }catch (RuntimeException re) {
+                    re.printStackTrace();
+
+                    String message = re.getMessage() != null ? re.getMessage() : re.getClass().getName();
+                    result.addParameter().setName("error").setValue(new StringType(message));
+                }
         return result;
     }
 
