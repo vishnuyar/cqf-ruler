@@ -166,11 +166,13 @@ public class ClaimProvider extends ClaimResourceProvider{
 		            while ((line = in.readLine()) != null) {
 		                sb.append(line);
 		            }
+		            System.out.println(sb.toString());
 		            JSONObject response = new JSONObject(sb.toString());
-		            this.errors = response.getJSONArray("errors");
-	            }
-	            
-	           
+		            if(response.has("errors")) {
+		            	this.errors = response.getJSONArray("errors");
+		            }
+		            
+	            }	           
 	            System.out.println("Errors:"+errors);
 	     
 	            System.out.println("\n x12_generated :"+x12_generated);
