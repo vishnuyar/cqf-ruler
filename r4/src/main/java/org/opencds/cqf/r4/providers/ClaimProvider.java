@@ -232,8 +232,12 @@ public class ClaimProvider extends ClaimResourceProvider{
 	         retVal.setCreated(new Date());
 	         retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
 
-	         
-	         retVal.setPreAuthRef(getSaltString());
+	         Identifier claimResIdentifier = new Identifier();
+	         claimResIdentifier.setSystem("http://identifiers.mettles.com");
+	         String ref = getSaltString();
+	         claimResIdentifier.setValue(ref);
+	         retVal.addIdentifier(claimResIdentifier);
+	         retVal.setPreAuthRef(ref);
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();
