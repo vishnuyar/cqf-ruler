@@ -20,6 +20,7 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.CacheControlDirective;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
 import ca.uhn.fhir.util.BundleUtil;
 import ca.uhn.fhir.util.bundle.BundleEntryParts;
 
@@ -27,12 +28,15 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("searchparam");
     DaoRegistry registry;
     HashMap<String, Collection<Object>> cacheQueries;
-    public static ThreadLocal<String> patient_fhir;
+    public static ThreadLocal<HashMap> patient_fhir;
+    
 
     static {
-        patient_fhir = new ThreadLocal<String>();
-        patient_fhir.set("");
+        patient_fhir = new ThreadLocal<HashMap>();
+        HashMap<String,String> nonLocal = new HashMap<>(); 
+        patient_fhir.set(nonLocal);
     }
+    
 
     public JpaFhirRetrieveProvider(DaoRegistry registry, SearchParameterResolver searchParameterResolver) {
         super(searchParameterResolver);
@@ -92,11 +96,11 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
             purl = HapiProperties.getProperties().getProperty("patient_server_url");
         }
-        if (patient_fhir.get() != null) {
-
-            if (!patient_fhir.get().equals("")) {
+        if (patient_fhir.get().containsKey("patient_server_url")) {
+            String nonlocal_url = (String)patient_fhir.get().get("patient_server_url");
+            if (!nonlocal_url.equals("")) {
                 local = false;
-                purl = patient_fhir.get();
+                purl = nonlocal_url;
             }
         }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
@@ -112,6 +116,17 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         if (!local) {
 
             client = FhirContext.forR4().newRestfulGenericClient(purl);
+
+            //Check for token
+            if (patient_fhir.get().containsKey("patient_server_token")) {
+                String auth_token = (String)patient_fhir.get().get("patient_server_token");
+                if (!auth_token.equals("")) {
+                    BearerTokenAuthInterceptor authInterceptor = new BearerTokenAuthInterceptor(auth_token);
+                    client.registerInterceptor(authInterceptor);
+                }
+            
+            }
+            
             //String maxCount = "_count=200";
             //searchURL +=maxCount;
             
