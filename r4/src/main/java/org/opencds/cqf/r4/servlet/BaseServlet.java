@@ -2,6 +2,7 @@ package org.opencds.cqf.r4.servlet;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -175,7 +176,8 @@ public class BaseServlet extends RestfulServer {
             config.addAllowedHeader("Accept");
             config.addAllowedHeader("X-Requested-With");
             config.addAllowedHeader("Content-Type");
-            config.addAllowedHeader("patient_fhir");
+            config.addAllowedHeader("patient_server_url");
+            config.addAllowedHeader("patient_server_token");
             config.addAllowedHeader("Authorization");
             config.addAllowedHeader("Cache-Control");
 
@@ -273,10 +275,16 @@ public class BaseServlet extends RestfulServer {
 	@Override
 	protected void service(HttpServletRequest theReq, HttpServletResponse theResp)
 			throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		if (theReq.getHeader("patient_fhir") != null) {
-			JpaFhirRetrieveProvider.patient_fhir.set(theReq.getHeader("patient_fhir"));
-		}
+        // TODO Auto-generated method stub
+        HashMap<String,String> nonLocal = new HashMap<>(); 
+		if (theReq.getHeader("patient_server_url") != null) {
+            nonLocal.put("patient_server_url", theReq.getHeader("patient_server_url"));
+			
+        }
+        if (theReq.getHeader("patient_server_token") != null) {
+			nonLocal.put("patient_server_token", theReq.getHeader("patient_server_token"));
+        }
+        JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
 		super.service(theReq, theResp);
 	}
     
