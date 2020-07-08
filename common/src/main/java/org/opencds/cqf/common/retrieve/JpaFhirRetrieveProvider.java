@@ -131,19 +131,23 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             //searchURL +=maxCount;
             
             while(searchURL != null) {
-                IBaseBundle bundle = client.search().byUrl(searchURL)
-                        .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
-                List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
-                if (parts.size() > 0){
-                    for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
-                        BundleEntryParts next = iterator.next();
-                        resourceList.add(next.getResource());
+                try{
+                    IBaseBundle bundle = client.search().byUrl(searchURL)
+                            .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
+                    List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
+                    if (parts.size() > 0){
+                        for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
+                            BundleEntryParts next = iterator.next();
+                            resourceList.add(next.getResource());
+                        }
+                        
                     }
-                    
+                    searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
+                    System.out.println("next: "+searchURL);
+                }catch (Exception e){
+                    e.printStackTrace();;
+
                 }
-                searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
-                System.out.println("next: "+searchURL);
-                
             }
 
         }
