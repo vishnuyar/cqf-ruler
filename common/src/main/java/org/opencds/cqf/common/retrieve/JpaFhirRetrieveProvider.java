@@ -129,9 +129,9 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             
             //String maxCount = "_count=200";
             //searchURL +=maxCount;
-            
-            while(searchURL != null) {
-                try{
+            try{
+                while(searchURL != null) {
+                    
                     IBaseBundle bundle = client.search().byUrl(searchURL)
                             .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
                     List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
@@ -144,10 +144,12 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
                     }
                     searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
                     System.out.println("next: "+searchURL);
-                }catch (Exception e){
-                    e.printStackTrace();;
-
                 }
+            }
+
+            catch (Exception e){
+                e.printStackTrace();;
+
             }
 
         }
