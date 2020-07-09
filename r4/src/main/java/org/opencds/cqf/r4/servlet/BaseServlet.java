@@ -276,12 +276,15 @@ public class BaseServlet extends RestfulServer {
 	protected void service(HttpServletRequest theReq, HttpServletResponse theResp)
 			throws ServletException, IOException {
         // TODO Auto-generated method stub
-        HashMap<String,String> nonLocal = new HashMap<>(); 
+        HashMap<String,String> nonLocal = new HashMap<>();
+        System.out.println("Overiding service"); 
 		if (theReq.getHeader("patient_server_url") != null) {
+            System.out.println("patient_server_url:"+theReq.getHeader("patient_server_url")); 
             nonLocal.put("patient_server_url", theReq.getHeader("patient_server_url"));
 			
         }
         if (theReq.getHeader("patient_server_token") != null) {
+            System.out.println("patient_server_token:"+theReq.getHeader("patient_server_token"));
 			nonLocal.put("patient_server_token", theReq.getHeader("patient_server_token"));
         }
         JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
