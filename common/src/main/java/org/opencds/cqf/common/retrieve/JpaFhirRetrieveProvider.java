@@ -100,6 +100,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             String nonlocal_url = (String)patient_fhir.get().get("patient_server_url");
             if (!nonlocal_url.equals("")) {
                 local = false;
+                System.out.println("Going non local: "+nonlocal_url);
                 purl = nonlocal_url;
             }
         }
@@ -148,7 +149,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             }
 
             catch (Exception e){
-                e.printStackTrace();;
+                e.printStackTrace();
 
             }
 
