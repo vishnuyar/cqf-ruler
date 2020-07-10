@@ -42,6 +42,7 @@ import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 import org.opencds.cqf.cql.execution.Context;
 import org.opencds.cqf.cql.execution.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
@@ -271,6 +272,8 @@ public class MeasureOperationsProvider {
     @OperationParam(name = "periodStart") String periodStart,
     @OperationParam(name = "periodEnd") String periodEnd,
     @OperationParam(name = "source") String source,
+    @OperationParam(name = "patientServerUrl") String patientServerUrl,
+    @OperationParam(name = "patientServerToken") String patientServerToken,
     @OperationParam(name = "user") String user,
     @OperationParam(name = "parameters") Parameters parameters,
     @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
@@ -279,6 +282,27 @@ public class MeasureOperationsProvider {
         logger.info("criteria:"+criteria);
         logger.info("periodStart:"+periodStart);
         logger.info("patientRef:"+patientRef);
+        logger.info("patientServerUrl:"+patientServerUrl);
+        logger.info("patientServerToken:"+patientServerToken);
+        //Setting server url and token for non local data access
+        HashMap<String,String> nonLocal = new HashMap<>();
+        Boolean local = true;
+        if (patientServerUrl !=null){
+            if(patientServerUrl != ""){
+                nonLocal.put("patient_server_url", patientServerUrl);
+                local = false;
+            }
+            
+        }
+        if (patientServerToken !=null){
+            if(patientServerToken != ""){
+                nonLocal.put("patient_server_token", patientServerToken);
+            }
+            
+        }
+        if(!local){
+            JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
+        }
         
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,

@@ -278,23 +278,6 @@ public class BaseServlet extends RestfulServer {
 			throws ServletException, IOException {
         // TODO Auto-generated method stub
         HashMap<String,String> nonLocal = new HashMap<>();
-        System.out.println("Overiding service"); 
-        Enumeration<String> headerNames = theReq.getHeaderNames();
- 
-        while (headerNames.hasMoreElements()) {
- 
-            String headerName = headerNames.nextElement();
-            System.out.println(headerName);
-            System.out.println("n");
- 
-            Enumeration<String> headers = theReq.getHeaders(headerName);
-            while (headers.hasMoreElements()) {
-                String headerValue = headers.nextElement();
-                System.out.println("t" + headerValue);
-                System.out.println("n");
-            }
- 
-        }
 		if (theReq.getHeader("patient_server_url") != null) {
             System.out.println("patient_server_url:"+theReq.getHeader("patient_server_url")); 
             nonLocal.put("patient_server_url", theReq.getHeader("patient_server_url"));
