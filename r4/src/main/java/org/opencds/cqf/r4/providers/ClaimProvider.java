@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -30,11 +31,15 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoMethodOutcome;
+import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.rp.r4.ClaimResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.PatientResourceProvider;
+import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -42,7 +47,10 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.RequiredParam;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.param.TokenParam;
+
 import org.springframework.context.ApplicationContext;
 
 
@@ -60,10 +68,12 @@ public class ClaimProvider extends ClaimResourceProvider{
 	
 	IFhirResourceDao<Bundle> bundleDao;
 	IFhirResourceDao<ClaimResponse> ClaimResponseDao;
+	DaoRegistry registry;
 	JSONArray errors = new JSONArray();
 	public ClaimProvider(ApplicationContext appCtx){
 		this.bundleDao = (IFhirResourceDao<Bundle>) appCtx.getBean("myBundleDaoR4", IFhirResourceDao.class);
 		this.ClaimResponseDao = (IFhirResourceDao<ClaimResponse>) appCtx.getBean("myClaimResponseDaoR4", IFhirResourceDao.class);
+		this.registry = appCtx.getBean(DaoRegistry.class);
 		System.out.println("----\n---");
 		System.out.println(this.ClaimResponseDao);
 		System.out.println(this.bundleDao);
@@ -88,16 +98,15 @@ public class ClaimProvider extends ClaimResourceProvider{
     }
 	
 	
-	private String submitX12(String x12_generated,ClaimResponse claimResponse) {
+	private String submitX12(String x12_generated,ClaimResponse claimResponse, String strUrl) {
 		String str_result = "";
 		try {
             // POST call for token
 			StringBuilder sb = new StringBuilder();
 			
-            URL url = new URL(HapiProperties.getProperty("x12_check_url"));
+            URL url = new URL(strUrl);
             byte[] postDataBytes = x12_generated.getBytes("UTF-8");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            System.out.println("KEY: "+HapiProperties.getProperty("x12_api_key"));
             conn.setRequestProperty("x-api-key",HapiProperties.getProperty("x12_api_key") );
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "text/plain");
@@ -110,27 +119,12 @@ public class ClaimProvider extends ClaimResourceProvider{
                 sb.append(line);
             }
             str_result = sb.toString();
-          System.out.println("\n  >>> Str/ Res 1:"+str_result);
-            if (str_result.contains("HCR*A1")) {
-            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.COMPLETE);
-            } else if (str_result.contains("HCR*A2")) {
-            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.PARTIAL);
-            } else if (str_result.contains("HCR*A3")) {
-            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-            } else if (str_result.contains("HCR*A4")) {
-            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-            } else if (str_result.contains("HCR*C")) {
-            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.CANCELLED);
-            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.COMPLETE);
-            }
+          System.out.println("\n  X12 Submission reponse :\n"+str_result);
+            
             //}
 		}
 		catch(Exception ex) {
-			
+			ex.printStackTrace();
 		}
 		return  str_result;
 	}
@@ -183,52 +177,86 @@ public class ClaimProvider extends ClaimResourceProvider{
 		 return x12_generated;
 	}
 	
-	private ClaimResponse  generateClaimResponse(Patient patient , Claim claim ) {
+	private  ClaimResponse readX12Response(String x12Str) {
+		ClaimResponse response =null;
+		try 
+		{
+
+				
+	            StringBuilder sb = new StringBuilder();
+	            URL url = new URL(HapiProperties.getProperty("x12_reader_url"));
+	            byte[] postDataBytes = x12Str.getBytes("UTF-8");
+	            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+	            conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_reader_key"));
+	            conn.setRequestMethod("POST");
+	            conn.setRequestProperty("Content-Type", "application/json");
+	            conn.setRequestProperty("Accept", "application/json");
+	            conn.setDoOutput(true);
+	            conn.getOutputStream().write(postDataBytes);
+	            
+	            
+				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+				String line = null;
+				while ((line = in.readLine()) != null) {
+					sb.append(line);
+				}
+				System.out.println("\n x12response :"+sb.toString());
+				IParser parser = FhirContext.forR4().newJsonParser();
+				response = parser.parseResource(ClaimResponse.class,sb.toString());
+			
+		            
+	            	           
+	            
+	     
+	            
+	        }
+		    catch (Exception ex) {
+		        ex.printStackTrace();
+		    }
+		return response;
+	}
+	
+
+	private ClaimResponse  generateClaimResponse(Patient patient, Claim claim ) {
 		ClaimResponse retVal = new ClaimResponse();
+		
+		
 		try {
-			if(patient.getIdentifier().size()>0) {
-				String patientIdentifier = patient.getIdentifier().get(0).getValue();
-				Reference patientRef = new Reference();
-			     if (!patientIdentifier.isEmpty()) {
-	                Identifier patientIdentifierObj = new Identifier();
-	                patientIdentifierObj.setValue(patientIdentifier);
-	                patientRef.setIdentifier(patientIdentifierObj);
-	                retVal.setPatient(patientRef);
-	             }
+			if(patient != null){
+				if(patient.getIdentifier().size()>0) {
+					String patientIdentifier = patient.getIdentifier().get(0).getValue();
+					Reference patientRef = new Reference();
+					 if (!patientIdentifier.isEmpty()) {
+						Identifier patientIdentifierObj = new Identifier();
+						patientIdentifierObj.setValue(patientIdentifier);
+						patientRef.setIdentifier(patientIdentifierObj);
+						retVal.setPatient(patientRef);
+					 }
+				}
+
 			}
 			
-			if(claim.getIdentifier().size() > 0) {
-				 String claimIdentifier = claim.getIdentifier().get(0).getValue();
-				 Reference reqRef = new Reference();
-		         if (!claimIdentifier.isEmpty()) {
-		             Identifier claimIdentifierObj = new Identifier();
-		             claimIdentifierObj.setValue(claimIdentifier);
-		             reqRef.setIdentifier(claimIdentifierObj);
-		         }
-		         retVal.setRequest(reqRef);
-			 }
-		     retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-		     retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-		     /*
-		     if(claim.getInsurer() != null) {
-		    	 if(claim.getInsurer().getIdentifier() !=null) {
-		    		 retVal.setInsurer(new Reference().setIdentifier(claim.getInsurer().getIdentifier()));
-		    	 }
-//		    	 retVal.setInsurer(claim.getInsurer());
-		     }
-		     if(claim.getProvider()!= null) {
-		    	 retVal.setRequestor(new Reference().setIdentifier(claim.getProvider().getIdentifier()));
-//		    	 retVal.setRequestor(claim.getProvider());
-		     }
-		     
-		     */
-		     
-		     retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION );
-//		     retVal.setPatient(new Reference(patient.getId()));
-		     retVal.setType(claim.getType());
-		     if(claim.getSubType() != null) {
-		    	 retVal.setSubType(claim.getSubType());
-		     }
+			if(claim !=null){
+				if(claim.getIdentifier().size() > 0) {
+					String claimIdentifier = claim.getIdentifier().get(0).getValue();
+					Reference reqRef = new Reference();
+					if (!claimIdentifier.isEmpty()) {
+						Identifier claimIdentifierObj = new Identifier();
+						claimIdentifierObj.setValue(claimIdentifier);
+						reqRef.setIdentifier(claimIdentifierObj);
+					}
+					retVal.setRequest(reqRef);
+				}
+				retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
+				retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
+				retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION );
+   				retVal.setType(claim.getType());
+				if(claim.getSubType() != null) {
+					retVal.setSubType(claim.getSubType());
+				}
+
+			}
+			
 	         retVal.setCreated(new Date());
 	         retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
 
@@ -237,7 +265,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 	         String ref = getSaltString();
 	         claimResIdentifier.setValue(ref);
 	         retVal.addIdentifier(claimResIdentifier);
-	         retVal.setPreAuthRef(ref);
+
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();
@@ -245,54 +273,73 @@ public class ClaimProvider extends ClaimResourceProvider{
         return retVal;
 	} 
 
+
+	private String getPayerURL(Claim claim){
+		String payerURL = "https://sm.mettles.com/x12/x12check";
+		//from claim get "insurer reference"
+		// from reference get resource
+		// from resource get name
+		// using name get payer from https://sm.mettles.com/cds/searchPayer
+		// from the bundle recd check for endpoint resource  -- by specific
+		// if end point name has "X12"
+		// from this endpoint get address
+		return payerURL;
+
+	}
+
+
+	private Bundle.BundleEntryComponent createTransactionEntry(Resource resource) {
+        Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(resource);
+        // if (resource.hasId()) {
+        //     transactionEntry.setRequest(
+        //             new Bundle.BundleEntryRequestComponent().setMethod(Bundle.HTTPVerb.PUT).setUrl(resource.getId()));
+        // } else {
+            transactionEntry.setRequest(new Bundle.BundleEntryRequestComponent().setMethod(Bundle.HTTPVerb.POST)
+                    .setUrl(resource.fhirType()));
+       // }
+        return transactionEntry;
+    }
 	
 	  // @Create
     @Operation(name = "$submit", idempotent = true)
-    public Bundle claimSubmit(RequestDetails details,
+    public Resource claimSubmit(RequestDetails details,
             @OperationParam(name = "claim", min = 1, max = 1, type = Bundle.class) Bundle bundle)
             throws RuntimeException {
     	this.errors = new JSONArray();
-    	
-        Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.COLLECTION);
-        Bundle responseBundle = new Bundle();
-        Bundle createdBundle = new Bundle();
-        String claimURL = "";
-        String patientId = "";
-        String claim_response_status = "";
-        String claim_response_outcome = "";
-        String patientIdentifier = "";
-        String claimIdentifier = "";
-        Claim claim = new Claim();
-        Patient patient = new Patient();
-        for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-            collectionBundle.addEntry(entry);
-//            System.out.println("ResType : " + entry.getResource().getResourceType());
-            if (entry.getResource().getResourceType().toString().equals("Claim")) {
-                try {
-                    claim = (Claim) entry.getResource();
-                    
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            } else if (entry.getResource().getResourceType().toString().equals("Patient")) {
-                try {
-                    patient = (Patient) entry.getResource();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
+		Patient patient = null;
+		Claim claim = null;
+		Bundle responseBundle = new Bundle();
+		ClaimResponse claimResponse = null;
+        List<ErrorComponent> errorList= new ArrayList<ErrorComponent>();
         try {
-	    	ClaimResponse retVal = generateClaimResponse(patient, claim);
+			for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+				if (entry.getResource().getResourceType().toString().equals("Claim")) {
+					try {
+						claim = (Claim) entry.getResource();
+						
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				} else if (entry.getResource().getResourceType().toString().equals("Patient")) {
+					try {
+						patient = (Patient) entry.getResource();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			if(patient !=null){
+				responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(patient));
+			}
+	    	ClaimResponse retVal = generateClaimResponse(patient,claim);
             if(!HapiProperties.getProperty("x12_api_key").equals("")) {
             	IParser jsonParser = details.getFhirContext().newJsonParser();
 				String jsonStr = jsonParser.encodeResourceToString(bundle);
-            	String x12_generated =  generateX12(jsonStr);
-    	    	if(this.errors.length() > 0) {
+				String x12_generated =  generateX12(jsonStr);
+				if(this.errors.length() > 0) {
     	    		retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
     	    		retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-    	    		List<ErrorComponent> errorList= new ArrayList<ErrorComponent>();
+    	    		
     	    		for(int i=0;i<this.errors.length();i++) {
     	    			JSONObject errorObj = new JSONObject(this.errors.get(i).toString());
     	    			System.out.println("errorObj: "+errorObj);
@@ -304,27 +351,68 @@ public class ClaimProvider extends ClaimResourceProvider{
     	    		retVal.setError(errorList);
     	    	}
     	    	else {
-    	    		String x12_response = submitX12( x12_generated, retVal);
-    		    	retVal = updateClaimResponse(retVal,x12_response);
-    	            System.out.println("----------X12 Generated--------- \n");
-    	            System.out.println(x12_response);
-    	            System.out.println("\n------------------- \n");
+					String x12SubmitUrl;
+					// Need to implement the below function
+					x12SubmitUrl = getPayerURL(claim);
+					// Submit the generated X12 to the payer url
+					String x12_response = submitX12( x12_generated, retVal,x12SubmitUrl);
+					// Send the response received from X12 submission for getting relevant data
+					if (x12_response.length()>0){
+						// If Error on 999 received, don't store claim response
+						if(x12_response.toLowerCase().contains("error")) {
+							retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+							retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
+							errorList.add(this.generateErrorComponent("400", x12_response));
+							System.out.println(errorList.size());
+							retVal.setError(errorList);
+							System.out.println(retVal.getError().size());
+			
+						}else{
+
+							ClaimResponse recdClaimResponse = readX12Response(x12_response);
+							if (recdClaimResponse != null){
+								ClaimResponse updatedResponse = updateClaimResponse(retVal,recdClaimResponse);
+
+								// Adding the transcation to the FHIR Server
+								// Bundle transactionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
+								// transactionBundle.addEntry(createTransactionEntry(updatedResponse));
+								// transactionBundle.addEntry(createTransactionEntry(patient));
+								// return (Resource) this.registry.getSystemDao().transaction(details, transactionBundle);
+								//return (Resource) this.bundleDao.create(transactionBundle, details).getResource();
+								DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(updatedResponse);
+								claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
+								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(claimResponse));
+
+							}
+							
+
+						}
+
+					}else{
+						retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+						retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
+						errorList.add(this.generateErrorComponent("400", "Internal Error"));
+						System.out.println(errorList.size());
+						retVal.setError(errorList);
+						System.out.println(retVal.getError().size());
+
+					}
+					
+
+    		    	
     	    	}
-                DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(retVal);
-                ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
-                Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
-                responseBundle.addEntry(transactionEntry);
-                DaoMethodOutcome bundleOutcome = this.bundleDao.create(collectionBundle);
-                createdBundle = (Bundle) bundleOutcome.getResource();
-                for (Bundle.BundleEntryComponent entry : createdBundle.getEntry()) {
-                    responseBundle.addEntry(entry);
-                }
-                responseBundle.setId(createdBundle.getId());
+                
+                
+                
             }
             else {
             	throw new RuntimeException("API key needs to be configured for requesting X12 server");
-            }
-            responseBundle.setType(Bundle.BundleType.COLLECTION);
+			}
+			if(claimResponse == null){
+				responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(retVal));
+
+			}
+            
             return responseBundle;
 
 
@@ -346,60 +434,15 @@ public class ClaimProvider extends ClaimResourceProvider{
 		return errorComponent;
     }
     
-	private ClaimResponse updateClaimResponse(ClaimResponse claimResponse,String x12) {
-		try {
-			
-			
-			if(x12.toLowerCase().contains("error")) {
-				claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-				ArrayList<ErrorComponent> ErrList = new ArrayList<ErrorComponent>();
-				ErrList.add(this.generateErrorComponent("400", x12));
-				System.out.println(ErrList.size());
-				claimResponse.setError(ErrList);
-				System.out.println(claimResponse.getError().size());
-//				BufferedReader bufReader = new BufferedReader(new StringReader(x12));
-//				String line="";
-//				while( (line=bufReader.readLine()) != null )
-//				{
-//					System.out.println("line  "+line);
-//					if(line.contains("*999*")) {
-//						System.out.println("-has error");
-//						
-//					}
-//				}
-			}
-			else {
-				if (x12.contains("HCR*A1")) {
-	            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-	            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.COMPLETE);
-	       
-	            } else if (x12.contains("HCR*A2")) {
-	            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-	            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.PARTIAL);
-	   
-	            } else if (x12.contains("HCR*A3")) {
-	            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-	            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-	      
-	            } else if (x12.contains("HCR*A4")) {
-	            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-	            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-	      
-	            } else if (x12.contains("HCR*C")) {
-	            	claimResponse.setStatus(ClaimResponse.ClaimResponseStatus.CANCELLED);
-	            	claimResponse.setOutcome(ClaimResponse.RemittanceOutcome.COMPLETE);
-	        
-	            }
-			}
-			
-			
-			
-		}
-		catch(Exception ex) {
-			
-		}
-		return claimResponse;
+	private ClaimResponse updateClaimResponse(ClaimResponse currentResponse,ClaimResponse latestResponse) {
+		currentResponse.setError(latestResponse.getError());
+		currentResponse.setOutcome(latestResponse.getOutcome());
+		currentResponse.setStatus(latestResponse.getStatus());
+		if(latestResponse.getPreAuthRef() != null){
+			currentResponse.setPreAuthRef(latestResponse.getPreAuthRef());
+					}
+	
+		return currentResponse;
 	}
 
 	@Operation(name = "$build", idempotent = true)
@@ -410,6 +453,43 @@ public class ClaimProvider extends ClaimResourceProvider{
 		return bundle;
 		
 	}
+
+	@Operation(name = "$update-claim", idempotent = true)
+    public Bundle updateResponse(RequestDetails details,
+            @OperationParam(name = "response", min = 1, max = 1, type = ClaimResponse.class) ClaimResponse claimResponse)
+            throws RuntimeException {
+				Boolean claimFound = false;
+				ClaimResponse fhirClaimResponse = null;
+				Bundle responseBundle = new Bundle();
+				List<Identifier> claimIdentifiers = claimResponse.getIdentifier();
+				for(Identifier identifier: claimIdentifiers){
+					String value = identifier.getValue();
+					SearchParameterMap identifierSearch = new SearchParameterMap().add("identifier",
+						new TokenParam().setValue(value));
+					System.out.println(" search : "+ identifierSearch.toNormalizedQueryString(FhirContext.forR4()));
+					IBundleProvider bundleProvider = this.ClaimResponseDao.search(identifierSearch);
+					List<IBaseResource> resources = bundleProvider.getResources(0, 10000);
+					for (Iterator iterator = resources.iterator(); iterator.hasNext();) {
+						fhirClaimResponse = (ClaimResponse)(iterator.next());
+						System.out.println("found: "+fhirClaimResponse.toString());
+						claimFound = true;
+					}
+            	}
+				if (!claimFound){
+					throw new RuntimeException("Claim Response sent doesn't match with any available ClaimResponse");
+				}else{
+
+					ClaimResponse updatedResponse = updateClaimResponse(fhirClaimResponse,claimResponse);
+					ClaimResponseDao.update(updatedResponse);
+					responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(updatedResponse));
+					
+				}
+            
+
+
+				return responseBundle;
+
+			}
 
 	
 }
