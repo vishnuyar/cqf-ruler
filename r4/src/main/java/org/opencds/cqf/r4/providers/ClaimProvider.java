@@ -68,11 +68,13 @@ public class ClaimProvider extends ClaimResourceProvider{
 	
 	IFhirResourceDao<Bundle> bundleDao;
 	IFhirResourceDao<ClaimResponse> ClaimResponseDao;
+	IFhirResourceDao<Patient> patientDao;
 	DaoRegistry registry;
 	JSONArray errors = new JSONArray();
 	public ClaimProvider(ApplicationContext appCtx){
 		this.bundleDao = (IFhirResourceDao<Bundle>) appCtx.getBean("myBundleDaoR4", IFhirResourceDao.class);
 		this.ClaimResponseDao = (IFhirResourceDao<ClaimResponse>) appCtx.getBean("myClaimResponseDaoR4", IFhirResourceDao.class);
+		this.patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
 		this.registry = appCtx.getBean(DaoRegistry.class);
 		System.out.println("----\n---");
 		System.out.println(this.ClaimResponseDao);
@@ -222,27 +224,17 @@ public class ClaimProvider extends ClaimResourceProvider{
 		
 		
 		try {
-			if(patient != null){
-				if(patient.getIdentifier().size()>0) {
-					String patientIdentifier = patient.getIdentifier().get(0).getValue();
-					Reference patientRef = new Reference();
-					 if (!patientIdentifier.isEmpty()) {
-						Identifier patientIdentifierObj = new Identifier();
-						patientIdentifierObj.setValue(patientIdentifier);
-						patientRef.setIdentifier(patientIdentifierObj);
-						retVal.setPatient(patientRef);
-					 }
-				}
-
-			}
+			
 			
 			if(claim !=null){
 				if(claim.getIdentifier().size() > 0) {
-					String claimIdentifier = claim.getIdentifier().get(0).getValue();
+					String claimIdentifierValue = claim.getIdentifier().get(0).getValue();
+					String claimIdentifierSystem = claim.getIdentifier().get(0).getSystem();
 					Reference reqRef = new Reference();
-					if (!claimIdentifier.isEmpty()) {
+					if (!claimIdentifierValue.isEmpty()) {
 						Identifier claimIdentifierObj = new Identifier();
-						claimIdentifierObj.setValue(claimIdentifier);
+						claimIdentifierObj.setValue(claimIdentifierValue);
+						claimIdentifierObj.setSystem(claimIdentifierSystem);
 						reqRef.setIdentifier(claimIdentifierObj);
 					}
 					retVal.setRequest(reqRef);
@@ -298,7 +290,29 @@ public class ClaimProvider extends ClaimResourceProvider{
                     .setUrl(resource.fhirType()));
        // }
         return transactionEntry;
-    }
+	}
+	
+	private Patient getPatient(Patient patient){
+		Patient serverPatient = null;
+		for (Identifier identifier : patient.getIdentifier()){
+			SearchParameterMap	map = new SearchParameterMap();
+			TokenParam param = new TokenParam();
+			param.setSystem(identifier.getSystem());
+			param.setValue(identifier.getValue());
+			map.add("identifier", param);
+			System.out.println(" search : "+ map.toNormalizedQueryString(FhirContext.forR4()));
+			List<Patient> patients = new ArrayList<>();
+        	IBundleProvider patientProvider = registry.getResourceDao("Patient").search(map);
+			List<IBaseResource> patientList = patientProvider.getResources(0, patientProvider.size());
+			System.out.println("patient available:"+patientList.size());
+			if(patientList.size()>0){
+				 serverPatient = (Patient)patientList.get(0);
+				return serverPatient;
+			}
+		}
+
+		return serverPatient;
+	}
 	
 	  // @Create
     @Operation(name = "$submit", idempotent = true)
@@ -307,6 +321,7 @@ public class ClaimProvider extends ClaimResourceProvider{
             throws RuntimeException {
     	this.errors = new JSONArray();
 		Patient patient = null;
+		Patient serverPatient = null;
 		Claim claim = null;
 		Bundle responseBundle = new Bundle();
 		ClaimResponse claimResponse = null;
@@ -328,9 +343,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 					}
 				}
 			}
-			if(patient !=null){
-				responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(patient));
-			}
+			
 	    	ClaimResponse retVal = generateClaimResponse(patient,claim);
             if(!HapiProperties.getProperty("x12_generator_key").equals("")) {
             	IParser jsonParser = details.getFhirContext().newJsonParser();
@@ -372,16 +385,27 @@ public class ClaimProvider extends ClaimResourceProvider{
 							ClaimResponse recdClaimResponse = readX12Response(x12_response);
 							if (recdClaimResponse != null){
 								ClaimResponse updatedResponse = updateClaimResponse(retVal,recdClaimResponse);
-
-								// Adding the transcation to the FHIR Server
-								// Bundle transactionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
-								// transactionBundle.addEntry(createTransactionEntry(updatedResponse));
-								// transactionBundle.addEntry(createTransactionEntry(patient));
-								// return (Resource) this.registry.getSystemDao().transaction(details, transactionBundle);
-								//return (Resource) this.bundleDao.create(transactionBundle, details).getResource();
+								//Need to add the identifier received to this claimresponse
+								if(recdClaimResponse.getIdentifier().size()>0){
+									//Adding the first identifier recieved
+									retVal.addIdentifier(recdClaimResponse.getIdentifier().get(0));
+								}
+								//Before adding claimResponse check if patient already available in the server
+								if(patient!=null){
+									serverPatient = getPatient(patient);
+								}
+								if(serverPatient == null){
+									DaoMethodOutcome patientOutcome = patientDao.create(patient);
+									serverPatient = (Patient) patientOutcome.getResource();
+									
+									
+								}
+								updatedResponse.setPatient(new Reference(serverPatient.getId()));
 								DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(updatedResponse);
 								claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
 								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(claimResponse));
+								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(serverPatient));
+								
 
 							}
 							
@@ -440,7 +464,8 @@ public class ClaimProvider extends ClaimResourceProvider{
 		currentResponse.setStatus(latestResponse.getStatus());
 		if(latestResponse.getPreAuthRef() != null){
 			currentResponse.setPreAuthRef(latestResponse.getPreAuthRef());
-					}
+		}
+		
 	
 		return currentResponse;
 	}
@@ -463,16 +488,19 @@ public class ClaimProvider extends ClaimResourceProvider{
 				Bundle responseBundle = new Bundle();
 				List<Identifier> claimIdentifiers = claimResponse.getIdentifier();
 				for(Identifier identifier: claimIdentifiers){
-					String value = identifier.getValue();
-					SearchParameterMap identifierSearch = new SearchParameterMap().add("identifier",
-						new TokenParam().setValue(value));
+					SearchParameterMap identifierSearch = new SearchParameterMap();
+					TokenParam param = new TokenParam();
+					param.setSystem(identifier.getSystem());
+					param.setValue(identifier.getValue());
+					identifierSearch.add("identifier", param);
 					System.out.println(" search : "+ identifierSearch.toNormalizedQueryString(FhirContext.forR4()));
 					IBundleProvider bundleProvider = this.ClaimResponseDao.search(identifierSearch);
-					List<IBaseResource> resources = bundleProvider.getResources(0, 10000);
+					List<IBaseResource> resources = bundleProvider.getResources(0, bundleProvider.size());
 					for (Iterator iterator = resources.iterator(); iterator.hasNext();) {
 						fhirClaimResponse = (ClaimResponse)(iterator.next());
 						System.out.println("found: "+fhirClaimResponse.toString());
 						claimFound = true;
+						break;
 					}
             	}
 				if (!claimFound){
