@@ -107,7 +107,7 @@ public class ClaimProvider extends ClaimResourceProvider{
             URL url = new URL(strUrl);
             byte[] postDataBytes = x12_generated.getBytes("UTF-8");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestProperty("x-api-key",HapiProperties.getProperty("x12_api_key") );
+            //conn.setRequestProperty("x-api-key",HapiProperties.getProperty("x12_generator_key") );
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "text/plain");
             conn.setRequestProperty("Accept", "text/plain");
@@ -139,7 +139,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 	            URL url = new URL(HapiProperties.getProperty("x12_generator_url"));
 	            byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 	            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-	            conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_api_key"));
+	            conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_generator_key"));
 	            conn.setRequestMethod("POST");
 	            conn.setRequestProperty("Content-Type", "application/json");
 	            conn.setRequestProperty("Accept", "application/json");
@@ -332,7 +332,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 				responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(patient));
 			}
 	    	ClaimResponse retVal = generateClaimResponse(patient,claim);
-            if(!HapiProperties.getProperty("x12_api_key").equals("")) {
+            if(!HapiProperties.getProperty("x12_generator_key").equals("")) {
             	IParser jsonParser = details.getFhirContext().newJsonParser();
 				String jsonStr = jsonParser.encodeResourceToString(bundle);
 				String x12_generated =  generateX12(jsonStr);
