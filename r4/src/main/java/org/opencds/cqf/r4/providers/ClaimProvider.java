@@ -465,6 +465,9 @@ public class ClaimProvider extends ClaimResourceProvider{
 		if(latestResponse.getPreAuthRef() != null){
 			currentResponse.setPreAuthRef(latestResponse.getPreAuthRef());
 		}
+		if(latestResponse.getExtension().size() > 0){
+			currentResponse.setExtension(latestResponse.getExtension());
+		}
 		
 	
 		return currentResponse;
@@ -480,12 +483,11 @@ public class ClaimProvider extends ClaimResourceProvider{
 	}
 
 	@Operation(name = "$update-claim", idempotent = true)
-    public Bundle updateResponse(RequestDetails details,
+    public Boolean updateResponse(RequestDetails details,
             @OperationParam(name = "response", min = 1, max = 1, type = ClaimResponse.class) ClaimResponse claimResponse)
             throws RuntimeException {
 				Boolean claimFound = false;
 				ClaimResponse fhirClaimResponse = null;
-				Bundle responseBundle = new Bundle();
 				List<Identifier> claimIdentifiers = claimResponse.getIdentifier();
 				for(Identifier identifier: claimIdentifiers){
 					SearchParameterMap identifierSearch = new SearchParameterMap();
@@ -504,19 +506,19 @@ public class ClaimProvider extends ClaimResourceProvider{
 					}
             	}
 				if (!claimFound){
-					throw new RuntimeException("Claim Response sent doesn't match with any available ClaimResponse");
+					System.out.println("Claim Response sent doesn't match with any available ClaimResponse");
+					return false;
 				}else{
 
 					ClaimResponse updatedResponse = updateClaimResponse(fhirClaimResponse,claimResponse);
 					ClaimResponseDao.update(updatedResponse);
-					responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(updatedResponse));
+					return true;
 					
 				}
             
 
 
-				return responseBundle;
-
+				
 			}
 
 	
