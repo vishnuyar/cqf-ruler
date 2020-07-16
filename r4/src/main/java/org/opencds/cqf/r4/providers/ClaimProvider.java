@@ -483,10 +483,11 @@ public class ClaimProvider extends ClaimResourceProvider{
 	}
 
 	@Operation(name = "$update-claim", idempotent = true)
-    public Boolean updateResponse(RequestDetails details,
+    public Bundle updateResponse(RequestDetails details,
             @OperationParam(name = "response", min = 1, max = 1, type = ClaimResponse.class) ClaimResponse claimResponse)
             throws RuntimeException {
 				Boolean claimFound = false;
+				Bundle responseBundle = new Bundle();
 				ClaimResponse fhirClaimResponse = null;
 				List<Identifier> claimIdentifiers = claimResponse.getIdentifier();
 				for(Identifier identifier: claimIdentifiers){
@@ -507,16 +508,16 @@ public class ClaimProvider extends ClaimResourceProvider{
             	}
 				if (!claimFound){
 					System.out.println("Claim Response sent doesn't match with any available ClaimResponse");
-					return false;
+					
 				}else{
 
 					ClaimResponse updatedResponse = updateClaimResponse(fhirClaimResponse,claimResponse);
 					ClaimResponseDao.update(updatedResponse);
-					return true;
+					
 					
 				}
             
-
+				return responseBundle;
 
 				
 			}
