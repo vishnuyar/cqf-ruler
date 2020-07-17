@@ -21,6 +21,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.hl7.fhir.ClaimResponseItem;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
@@ -248,9 +249,15 @@ public class ClaimProvider extends ClaimResourceProvider{
 				}
 
 			}
+
 			
 	         retVal.setCreated(new Date());
-	         retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
+			 retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
+			 //Need to add items from Claim to ClaimReponse
+			//  if(claim.getItem().size()>0){
+				 
+			// 	 retVal.setItem((List<ClaimResponse.ItemComponent>)claim.getItem());
+			//  }
 
 	         Identifier claimResIdentifier = new Identifier();
 	         claimResIdentifier.setSystem("http://identifiers.mettles.com");
@@ -349,7 +356,7 @@ public class ClaimProvider extends ClaimResourceProvider{
             	IParser jsonParser = details.getFhirContext().newJsonParser();
 				String jsonStr = jsonParser.encodeResourceToString(bundle);
 				String x12_generated =  generateX12(jsonStr);
-				if(this.errors.length() > 0) {
+				if((this.errors.length() > 0 )| (x12_generated.length() < 5)) {
     	    		retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
     	    		retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
     	    		
@@ -360,7 +367,12 @@ public class ClaimProvider extends ClaimResourceProvider{
     	    			String message = errorObj.getString("message");
     	    			errorList.add(this.generateErrorComponent(code,message));	    			
     	    			
-    	    		}
+					}
+					if(this.errors.length()==0){
+						errorList.add(this.generateErrorComponent("400","Failed to Generate X12"));
+
+					}
+					
     	    		retVal.setError(errorList);
     	    	}
     	    	else {
@@ -415,7 +427,7 @@ public class ClaimProvider extends ClaimResourceProvider{
 					}else{
 						retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
 						retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-						errorList.add(this.generateErrorComponent("400", "Internal Error"));
+						errorList.add(this.generateErrorComponent("400", "Error on submitting X12"));
 						System.out.println(errorList.size());
 						retVal.setError(errorList);
 						System.out.println(retVal.getError().size());
@@ -467,6 +479,9 @@ public class ClaimProvider extends ClaimResourceProvider{
 		}
 		if(latestResponse.getExtension().size() > 0){
 			currentResponse.setExtension(latestResponse.getExtension());
+		}
+		if(latestResponse.getProcessNote().size() > 0){
+			currentResponse.setProcessNote(latestResponse.getProcessNote());
 		}
 		
 	
