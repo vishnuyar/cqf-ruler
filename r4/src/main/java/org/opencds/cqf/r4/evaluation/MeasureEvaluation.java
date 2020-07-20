@@ -3,6 +3,7 @@ package org.opencds.cqf.r4.evaluation;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.model.api.TemporalPrecisionEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import org.hl7.fhir.r4.model.*;
@@ -16,6 +17,7 @@ import org.opencds.cqf.common.evaluation.MeasureScoring;
 import org.opencds.cqf.cql.data.DataProvider;
 import org.opencds.cqf.cql.execution.Context;
 import org.opencds.cqf.cql.runtime.Interval;
+import org.opencds.cqf.cql.runtime.Date;
 import org.opencds.cqf.r4.builders.MeasureReportBuilder;
 import org.opencds.cqf.r4.helpers.FhirMeasureBundler;
 import org.slf4j.Logger;
@@ -192,9 +194,36 @@ public class MeasureEvaluation {
                     }
                     
                 }
+                else if (cqlResult instanceof String){
+                    parameters.addParameter(cqlcriteria, (String)cqlResult);
+
+                }
+                else if (cqlResult instanceof CodeType){
+                    CodeType codeType = (CodeType)cqlResult;
+                    
+                    Parameters.ParametersParameterComponent pc = 
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    pc.setValue(codeType);
+                    parameters.addParameter(pc);
+                    System.out.println("casting to Code"+codeType.getValue());
+
+                }
+                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Date){
+                    DateType date = new DateType();
+                    org.opencds.cqf.cql.runtime.Date cqlDate = (org.opencds.cqf.cql.runtime.Date)cqlResult;
+                    date.setValueAsString(cqlDate.toString());
+                    Parameters.ParametersParameterComponent pc = 
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    pc.setValue(date);
+                    parameters.addParameter(pc);
+                    System.out.println("casting to Date"+date.asStringValue());
+
+                }
+
                 else {
                     System.out.println("Final no cast available");
-                    parameters.addParameter(cqlcriteria, cqlResult.toString());
+                    System.out.println("String value of result is "+cqlResult.toString());
+                    parameters.addParameter(cqlcriteria, "");
                     
                 }
 
