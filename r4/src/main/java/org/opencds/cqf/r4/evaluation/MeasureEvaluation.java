@@ -255,6 +255,22 @@ public class MeasureEvaluation {
                     System.out.println("casting to decimal"+decimal.asStringValue());
 
                 }
+                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Interval){
+                    Period cqlPeriod = new Period();
+                    System.out.println("received interval : "+cqlResult.toString());
+
+                    org.opencds.cqf.cql.runtime.Interval cqlInterval = (org.opencds.cqf.cql.runtime.Interval)cqlResult;
+                    org.opencds.cqf.cql.runtime.DateTime startTime = (org.opencds.cqf.cql.runtime.DateTime)cqlInterval.getStart();
+                    org.opencds.cqf.cql.runtime.DateTime endTime = (org.opencds.cqf.cql.runtime.DateTime)cqlInterval.getEnd();
+                    cqlPeriod.setStart(java.util.Date.from(startTime.getDateTime().toInstant()));
+                    cqlPeriod.setEnd(java.util.Date.from(endTime.getDateTime().toInstant()));
+                    Parameters.ParametersParameterComponent pc = 
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    pc.setValue(cqlPeriod);
+                    parameters.addParameter(pc);
+                    System.out.println("casting to Period "+cqlPeriod.toString());
+
+                }
                 else if (cqlResult instanceof String){
                     parameters.addParameter(cqlcriteria, (String)cqlResult);
 
