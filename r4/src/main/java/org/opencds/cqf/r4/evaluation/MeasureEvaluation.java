@@ -202,10 +202,7 @@ public class MeasureEvaluation {
                     }
                     
                 }
-                else if (cqlResult instanceof String){
-                    parameters.addParameter(cqlcriteria, (String)cqlResult);
-
-                }
+                
                 else if (cqlResult instanceof CodeType){
                     CodeType codeType = (CodeType)cqlResult;
                     
@@ -225,6 +222,32 @@ public class MeasureEvaluation {
                     pc.setValue(date);
                     parameters.addParameter(pc);
                     System.out.println("casting to Date"+date.asStringValue());
+
+                }
+                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.DateTime){
+                    DateTimeType datetime = new DateTimeType();
+                    org.opencds.cqf.cql.runtime.DateTime cqlDate = (org.opencds.cqf.cql.runtime.DateTime)cqlResult;
+                    datetime.setValueAsString(cqlDate.toString());
+                    Parameters.ParametersParameterComponent pc = 
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    pc.setValue(datetime);
+                    parameters.addParameter(pc);
+                    System.out.println("casting to Datetime "+datetime.asStringValue());
+
+                }
+                else if (cqlResult instanceof java.math.BigDecimal){
+                    DecimalType decimal = new DecimalType();
+                    java.math.BigDecimal cqlDecimal = (java.math.BigDecimal)cqlResult;
+                    decimal.setValue(cqlDecimal);
+                    Parameters.ParametersParameterComponent pc = 
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    pc.setValue(decimal);
+                    parameters.addParameter(pc);
+                    System.out.println("casting to decimal"+decimal.asStringValue());
+
+                }
+                else if (cqlResult instanceof String){
+                    parameters.addParameter(cqlcriteria, (String)cqlResult);
 
                 }
 
