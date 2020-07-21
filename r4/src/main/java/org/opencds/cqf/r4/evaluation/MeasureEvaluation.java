@@ -132,12 +132,20 @@ public class MeasureEvaluation {
                     Boolean isResource = false;
                     Bundle bundle = new Bundle();
                     ArrayList<String> arrayValues = new ArrayList<>();
+                    int count = 0;
                     for (Object obj: (Iterable<Object>)cqlResult){
+                        count +=1;
+                        System.out.println("The count of obj is: "+count);
                         if (obj instanceof Resource){
                             isResource = true;
                             bundle.addEntry(new Bundle.BundleEntryComponent().setResource((Resource)obj));
                         }else{
-                            arrayValues.add(obj.toString());
+                            if(obj != null){
+                                System.out.println("Object of type"+obj.getClass());
+                                arrayValues.add(obj.toString());
+
+                            }
+                            
                         }
                     }
                     
