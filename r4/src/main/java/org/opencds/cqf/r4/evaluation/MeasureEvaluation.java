@@ -235,6 +235,15 @@ public class MeasureEvaluation {
                     System.out.println("casting to Datetime "+datetime.asStringValue());
 
                 }
+                else if (cqlResult instanceof DateTimeType){
+                    DateTimeType cqlDate = (DateTimeType)cqlResult;
+                    Parameters.ParametersParameterComponent pc = 
+                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    pc.setValue(cqlDate);
+                    parameters.addParameter(pc);
+                    System.out.println("casting to Datetime "+cqlDate.asStringValue());
+
+                }
                 else if (cqlResult instanceof java.math.BigDecimal){
                     DecimalType decimal = new DecimalType();
                     java.math.BigDecimal cqlDecimal = (java.math.BigDecimal)cqlResult;
