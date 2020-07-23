@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Bundle;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.cql.retrieve.*;
 import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
@@ -29,14 +30,12 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     DaoRegistry registry;
     HashMap<String, Collection<Object>> cacheQueries;
     public static ThreadLocal<HashMap> patient_fhir;
-    
 
     static {
         patient_fhir = new ThreadLocal<HashMap>();
-        HashMap<String,String> nonLocal = new HashMap<>(); 
+        HashMap<String, Object> nonLocal = new HashMap<>();
         patient_fhir.set(nonLocal);
     }
-    
 
     public JpaFhirRetrieveProvider(DaoRegistry registry, SearchParameterResolver searchParameterResolver) {
         super(searchParameterResolver);
@@ -90,20 +89,10 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
         FhirContext myFhirContext = FhirContext.forR4();
         boolean local = true;
+        boolean inMemory = false;
         String purl = "";
-        if (HapiProperties.getProperties().containsKey("patient_server_url")) {
-            local = false;
+        List<IBaseResource> resourceList = new ArrayList<>();
 
-            purl = HapiProperties.getProperties().getProperty("patient_server_url");
-        }
-        if (patient_fhir.get().containsKey("patient_server_url")) {
-            String nonlocal_url = (String)patient_fhir.get().get("patient_server_url");
-            if (!nonlocal_url.equals("")) {
-                local = false;
-                System.out.println("Going non local: "+nonlocal_url);
-                purl = nonlocal_url;
-            }
-        }
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
         if (cacheQueries.containsKey(searchURL)) {
             ourLog.info("Retrieving from cache : " + searchURL);
@@ -112,43 +101,87 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         // System.out.println("The query string is " + searchURL);
         ourLog.info("The query string is " + searchURL);
 
+        if (HapiProperties.getProperties().containsKey("patient_server_url")) {
+            local = false;
+
+            purl = HapiProperties.getProperties().getProperty("patient_server_url");
+        }
+        if (patient_fhir.get().containsKey("patient_server_url")) {
+            String nonlocal_url = (String) patient_fhir.get().get("patient_server_url");
+            if (!nonlocal_url.equals("")) {
+                local = false;
+                System.out.println("Going non local: " + nonlocal_url);
+                purl = nonlocal_url;
+            }
+        }
+
+        if (patient_fhir.get().containsKey("preFetchBundle")) {
+            IBaseBundle preFetchBundle = (IBaseBundle) patient_fhir.get().get("preFetchBundle");
+            boolean resourceFound = false;
+            if (preFetchBundle != null) {
+                local = false;
+                inMemory = true;
+                System.out.println("Going in memory retrieve: ");
+                List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, preFetchBundle);
+                System.out.println("parts.size(): " + parts.size());
+                if (parts.size() > 0) {
+                    System.out.println("Inside looking for datatype: " + dataType);
+                    for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
+                        BundleEntryParts next = iterator.next();
+                        IBaseResource resource = (IBaseResource) next.getResource();
+                        String resourceType = resource.fhirType();
+                        if (resourceType.equals(dataType)) {
+                            resourceFound = false;
+                            System.out.println("Adding to resourcelist : " + dataType);
+                            resourceList.add(resource);
+                        }
+
+                    }
+
+                }
+            }
+            if (!resourceFound) {
+                System.out.println("*************Didn't find the resourceType:::" + dataType + "::::****************");
+            }
+        }
+
         IGenericClient client;
-        List<IBaseResource> resourceList = new ArrayList<>();
-        if (!local) {
+
+        if ((!local) & (!inMemory)) {
 
             client = FhirContext.forR4().newRestfulGenericClient(purl);
 
-            //Check for token
+            // Check for token
             if (patient_fhir.get().containsKey("patient_server_token")) {
-                String auth_token = (String)patient_fhir.get().get("patient_server_token");
+                String auth_token = (String) patient_fhir.get().get("patient_server_token");
                 if (!auth_token.equals("")) {
                     BearerTokenAuthInterceptor authInterceptor = new BearerTokenAuthInterceptor(auth_token);
                     client.registerInterceptor(authInterceptor);
                 }
-            
+
             }
-            
-            //String maxCount = "_count=200";
-            //searchURL +=maxCount;
-            try{
-                while(searchURL != null) {
-                    
+
+            // String maxCount = "_count=200";
+            // searchURL +=maxCount;
+            try {
+                while (searchURL != null) {
+
                     IBaseBundle bundle = client.search().byUrl(searchURL)
                             .cacheControl(new CacheControlDirective().setNoCache(true)).execute();
                     List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, bundle);
-                    if (parts.size() > 0){
+                    if (parts.size() > 0) {
                         for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
                             BundleEntryParts next = iterator.next();
                             resourceList.add(next.getResource());
                         }
-                        
+
                     }
                     searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
-                    System.out.println("next: "+searchURL);
+                    System.out.println("next: " + searchURL);
                 }
             }
 
-            catch (Exception e){
+            catch (Exception e) {
                 e.printStackTrace();
 
             }
@@ -157,7 +190,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         // IGenericClient client = FhirContext.forR4()
         // .newRestfulGenericClient("http://localhost:9999/hapi-fhir-jpaserver/fhir");
 
-        else {
+        if (local) {
             IBundleProvider bundleProvider = dao.search(map);
             if (bundleProvider.size() == null) {
                 ourLog.info("Caching : " + searchURL);

@@ -269,7 +269,8 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "periodStart") String periodStart,
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "source") String source,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
-            @OperationParam(name = "patientServerToken") String patientServerToken,
+			@OperationParam(name = "patientServerToken") String patientServerToken,
+			@OperationParam(name = "preFetch", min = 1, max = 1, type = Bundle.class) Bundle preFetchBundle,
             @OperationParam(name = "user") String user, @OperationParam(name = "parameters") Parameters parameters,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
         logger.info("in the library evaluate function");
@@ -280,7 +281,7 @@ public class MeasureOperationsProvider {
         logger.info("patientServerUrl:" + patientServerUrl);
         logger.info("patientServerToken:" + patientServerToken);
         // Setting server url and token for non local data access
-        HashMap<String, String> nonLocal = new HashMap<>();
+        HashMap<String, Object> nonLocal = new HashMap<>();
         Boolean local = true;
         if (patientServerUrl != null) {
             if (patientServerUrl != "") {
@@ -293,6 +294,12 @@ public class MeasureOperationsProvider {
             if (patientServerToken != "") {
                 nonLocal.put("patient_server_token", patientServerToken);
             }
+
+		}
+		if (preFetchBundle != null) {
+			local = false;
+			System.out.println("Received prefetch bundle");
+                nonLocal.put("preFetchBundle", preFetchBundle);
 
         }
         if (!local) {
