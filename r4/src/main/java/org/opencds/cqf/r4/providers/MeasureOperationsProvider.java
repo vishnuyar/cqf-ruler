@@ -257,93 +257,80 @@ public class MeasureOperationsProvider {
     // "");
     // }
 
-
     /****
      * 
      * New operation being written to evaluate library with criteria
      * 
      */
-    
-    @Operation(name = "$lib-evaluate", idempotent = true, type=Measure.class)
-    public Parameters libraryEvaluate(
-    @OperationParam(name = "libraryId") String libraryId,
-    @OperationParam(name = "criteria") String criteria,
-    @OperationParam(name = "subject") String patientRef,
-    @OperationParam(name = "periodStart") String periodStart,
-    @OperationParam(name = "periodEnd") String periodEnd,
-    @OperationParam(name = "source") String source,
-    @OperationParam(name = "patientServerUrl") String patientServerUrl,
-    @OperationParam(name = "patientServerToken") String patientServerToken,
-    @OperationParam(name = "user") String user,
-    @OperationParam(name = "parameters") Parameters parameters,
-    @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException{
+
+    @Operation(name = "$lib-evaluate", idempotent = true, type = Measure.class)
+    public Parameters libraryEvaluate(@OperationParam(name = "libraryId") String libraryId,
+            @OperationParam(name = "criteria") String criteria, @OperationParam(name = "subject") String patientRef,
+            @OperationParam(name = "periodStart") String periodStart,
+            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "source") String source,
+            @OperationParam(name = "patientServerUrl") String patientServerUrl,
+            @OperationParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "user") String user, @OperationParam(name = "parameters") Parameters parameters,
+            @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
         logger.info("in the library evaluate function");
-        logger.info("library id: "+ libraryId);
-        logger.info("criteria:"+criteria);
-        logger.info("periodStart:"+periodStart);
-        logger.info("patientRef:"+patientRef);
-        logger.info("patientServerUrl:"+patientServerUrl);
-        logger.info("patientServerToken:"+patientServerToken);
-        //Setting server url and token for non local data access
-        HashMap<String,String> nonLocal = new HashMap<>();
+        logger.info("library id: " + libraryId);
+        logger.info("criteria:" + criteria);
+        logger.info("periodStart:" + periodStart);
+        logger.info("patientRef:" + patientRef);
+        logger.info("patientServerUrl:" + patientServerUrl);
+        logger.info("patientServerToken:" + patientServerToken);
+        // Setting server url and token for non local data access
+        HashMap<String, String> nonLocal = new HashMap<>();
         Boolean local = true;
-        if (patientServerUrl !=null){
-            if(patientServerUrl != ""){
+        if (patientServerUrl != null) {
+            if (patientServerUrl != "") {
                 nonLocal.put("patient_server_url", patientServerUrl);
                 local = false;
             }
-            
+
         }
-        if (patientServerToken !=null){
-            if(patientServerToken != ""){
+        if (patientServerToken != null) {
+            if (patientServerToken != "") {
                 nonLocal.put("patient_server_token", patientServerToken);
             }
-            
+
         }
-        if(!local){
+        if (!local) {
             JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
         }
-        
+
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
-        
 
         seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
-        
 
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
-        seed.getMeasurementPeriod());
+                seed.getMeasurementPeriod());
         // Add the type of Request
         Context context = seed.getContext();
         Library library = seed.getLibrary();
-        if (parameters != null)
-        {
-            for (Parameters.ParametersParameterComponent pc : parameters.getParameter())
-            {
+        if (parameters != null) {
+            for (Parameters.ParametersParameterComponent pc : parameters.getParameter()) {
                 System.out.println("PC name: " + pc.getName());
                 System.out.println("PC resource: " + pc.getResource());
                 context.setParameter(null, pc.getName(), pc.getResource());
-            }    
+            }
         }
         Parameters result = new Parameters();
-        try{
+        try {
 
-             result = evaluator.cqlEvaluate(context, patientRef, criteria,library);
-            
-        }catch (RuntimeException re) {
-                    re.printStackTrace();
+            result = evaluator.cqlEvaluate(context, patientRef, criteria, library);
 
-                    String message = re.getMessage() != null ? re.getMessage() : re.getClass().getName();
-                    result.addParameter().setName("error").setValue(new StringType(message));
-                }
+        } catch (RuntimeException re) {
+            re.printStackTrace();
+
+            String message = re.getMessage() != null ? re.getMessage() : re.getClass().getName();
+            result.addParameter().setName("error").setValue(new StringType(message));
+        }
         return result;
     }
 
-    
-    
-    
-    
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Parameters careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
             @OptionalParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "topic") String topic,
@@ -351,19 +338,16 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "measure") String measureparam,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OperationParam(name = "status") String status) {
-    	// logger.info("Caregap starting");
+        // logger.info("Caregap starting");
         Parameters parameters = new Parameters();
 
-        
-        
-        List<Patient> patients= new ArrayList<>();
+        List<Patient> patients = new ArrayList<>();
         List<Measure> measures = new ArrayList<>();
-        
 
         if ((patientRef == null) & (practitionerRef == null)) {
             throw new RuntimeException("Subject and Practitioner both cannot be null!");
         }
-        
+
         boolean topicgiven = false;
         boolean measuregiven = false;
 
@@ -386,70 +370,70 @@ public class MeasureOperationsProvider {
             if (valueCodingSearch) {
                 topicSearch = new SearchParameterMap().add("topic",
                         new TokenParam().setModifier(TokenParamModifier.valueOf("coding")).setValue(valueCode));
-                // logger.info("code search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
+                // logger.info("code search : "+
+                // topicSearch.toNormalizedQueryString(FhirContext.forR4()));
             } else {
                 topicSearch = new SearchParameterMap().add("topic",
                         new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic));
             }
 
-            // logger.info("Topic search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
+            // logger.info("Topic search : "+
+            // topicSearch.toNormalizedQueryString(FhirContext.forR4()));
             // add the search parametere to search for only activel measures
 
             topicSearch.add("status", new TokenParam().setValue("active"));
-            // logger.info("status search : "+ topicSearch.toNormalizedQueryString(FhirContext.forR4()));
+            // logger.info("status search : "+
+            // topicSearch.toNormalizedQueryString(FhirContext.forR4()));
 
-            
             IBundleProvider bundleProvider = this.measureResourceProvider.getDao().search(topicSearch);
             List<IBaseResource> resources = bundleProvider.getResources(0, 10000);
             for (Iterator iterator = resources.iterator(); iterator.hasNext();) {
-            	Measure res = (Measure)(iterator.next());
-            	measures.add(res);
-			}
+                Measure res = (Measure) (iterator.next());
+                measures.add(res);
+            }
             logger.info("t: " + measures.size());
 
         }
         if (measureparam != null) {
-            
-            
-            IBundleProvider bundleProvider = this.measureResourceProvider.getDao()
-                    .search(new SearchParameterMap().add("_id",
-                            new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(measureparam)));
-                    
+
+            IBundleProvider bundleProvider = this.measureResourceProvider.getDao().search(new SearchParameterMap()
+                    .add("_id", new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(measureparam)));
+
             List<IBaseResource> resources = bundleProvider.getResources(0, 10000);
             for (Iterator iterator = resources.iterator(); iterator.hasNext();) {
-            	Measure res = (Measure)(iterator.next());
-            	measures.add(res);
-			}
+                Measure res = (Measure) (iterator.next());
+                measures.add(res);
+            }
         }
         if (practitionerRef != null) {
             List<Patient> practitionerPatients = getPractitionerPatients(practitionerRef);
             patients.addAll(practitionerPatients);
         }
         if (patientRef != null) {
-        	patients.add(getPatients(patientRef));
+            patients.add(getPatients(patientRef));
         }
         logger.info("get library loader");
-            LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
-            logger.info("get seed");
-            MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
-                    this.libraryResolutionProvider);
+        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
+        logger.info("get seed");
+        MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
+                this.libraryResolutionProvider);
         for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
-            Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd,seed);
-            parameters.addParameter(
-                new Parameters.ParametersParameterComponent().setName("Care Gap Report for "+patient.getIdBase()).setResource(careGapBundle));
-            //careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(careGapBundle));     
-            
+            Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
+            parameters.addParameter(new Parameters.ParametersParameterComponent()
+                    .setName("Care Gap Report for " + patient.getIdBase()).setResource(careGapBundle));
+            // careGapReport.addEntry(new
+            // Bundle.BundleEntryComponent().setResource(careGapBundle));
+
         }
         // logger.info("Leaving Caregap");
         return parameters;
 
-       
     }
-    
-    private Bundle getCareGapReport(Patient patient, List<Measure> measures, String status,
-    		String periodStart, String periodEnd, MeasureEvaluationSeed seed) {
-    	Bundle careGapReport = new Bundle();
+
+    private Bundle getCareGapReport(Patient patient, List<Measure> measures, String status, String periodStart,
+            String periodEnd, MeasureEvaluationSeed seed) {
+        Bundle careGapReport = new Bundle();
         careGapReport.setType(Bundle.BundleType.DOCUMENT);
 
         Composition composition = new Composition();
@@ -458,13 +442,13 @@ public class MeasureOperationsProvider {
         CodeableConcept typeCode = new CodeableConcept()
                 .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
-        
+
         composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getId());
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
-            logger.info("measure:"+measure.getId());
-            Composition.SectionComponent section = new Composition.SectionComponent();        
+            logger.info("measure:" + measure.getId());
+            Composition.SectionComponent section = new Composition.SectionComponent();
             section.addEntry(new Reference(measure));
             if (measure.hasTitle()) {
                 section.setTitle(measure.getTitle());
@@ -477,7 +461,7 @@ public class MeasureOperationsProvider {
                 section.setText(new Narrative().setStatus(Narrative.NarrativeStatus.GENERATED)
                         .setDiv(new XhtmlNode().setValue(improvementNotation.getCodingFirstRep().getCode())));
             }
-            
+
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                     seed.getMeasurementPeriod());
@@ -515,19 +499,16 @@ public class MeasureOperationsProvider {
             }
         }
         return careGapReport;
-    	
+
     }
 
     private List<Patient> getGroupPatients(String groupId) {
         List<Patient> patients = new ArrayList<>();
-        
-       
+
         // // IIdType(GroupId));
         // patientgroup.getMember();
         return patients;
     }
-    
-    
 
     private List<Patient> getPractitionerPatients(String practitionerRef) {
         SearchParameterMap map = new SearchParameterMap();
@@ -540,13 +521,13 @@ public class MeasureOperationsProvider {
         patientList.forEach(x -> patients.add((Patient) x));
         return patients;
     }
-    
+
     private Patient getPatients(String patientRef) {
-    	if (!patientRef.startsWith("Patient/")) {
-    		patientRef = "Patient/" + patientRef;
-    	}
+        if (!patientRef.startsWith("Patient/")) {
+            patientRef = "Patient/" + patientRef;
+        }
         IIdType id = new Reference(patientRef).getReferenceElement();
-        Patient patient = (Patient)registry.getResourceDao("Patient").read(id);
+        Patient patient = (Patient) registry.getResourceDao("Patient").read(id);
         return patient;
     }
 

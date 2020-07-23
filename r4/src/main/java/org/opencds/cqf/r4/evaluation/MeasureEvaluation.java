@@ -100,194 +100,183 @@ public class MeasureEvaluation {
         return evaluate(measure, context, getAllPatients(), MeasureReport.MeasureReportType.SUMMARY);
     }
 
-
-
-    public Parameters cqlEvaluate(Context context, String patientId, String criteria, Library lib){
+    public Parameters cqlEvaluate(Context context, String patientId, String criteria, Library lib) {
         Parameters parameters = new Parameters();
         ArrayList<String> cqldef = new ArrayList<String>();
-        if (criteria.equals("EvaluateCQL")){
+        if (criteria.equals("EvaluateCQL")) {
             for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
                 System.out.println("Expression Type :" + expressionDef.getClass().getName());
                 System.out.println("Expression :" + expressionDef.getName());
-                if (!(expressionDef instanceof org.cqframework.cql.elm.execution.FunctionDef)){
+                if (!(expressionDef instanceof org.cqframework.cql.elm.execution.FunctionDef)) {
                     cqldef.add(expressionDef.getName());
                 }
-                
+
             }
-        }else{
+        } else {
             cqldef.add(criteria);
-            
+
         }
 
         for (String cqlcriteria : cqldef) {
-            Object cqlResult = evaluateCqlExpression(context,patientId,cqlcriteria);
-        
-            
+            Object cqlResult = evaluateCqlExpression(context, patientId, cqlcriteria);
+
             if (cqlResult == null) {
                 logger.info("Got null result");
                 parameters.addParameter(cqlcriteria, "");
-            }else{
-                logger.info("Got result of type: " +cqlResult.getClass());
-                if (cqlResult instanceof ArrayList){
+            } else {
+                logger.info("Got result of type: " + cqlResult.getClass());
+                if (cqlResult instanceof ArrayList) {
                     Boolean isResource = false;
                     Bundle bundle = new Bundle();
                     ArrayList<String> arrayValues = new ArrayList<>();
                     int count = 0;
-                    for (Object obj: (Iterable<Object>)cqlResult){
-                        count +=1;
-                        System.out.println("The count of obj is: "+count);
-                        if (obj instanceof Resource){
+                    for (Object obj : (Iterable<Object>) cqlResult) {
+                        count += 1;
+                        System.out.println("The count of obj is: " + count);
+                        if (obj instanceof Resource) {
                             isResource = true;
-                            bundle.addEntry(new Bundle.BundleEntryComponent().setResource((Resource)obj));
-                        }else{
-                            if(obj != null){
-                                System.out.println("Object of type"+obj.getClass());
+                            bundle.addEntry(new Bundle.BundleEntryComponent().setResource((Resource) obj));
+                        } else {
+                            if (obj != null) {
+                                System.out.println("Object of type" + obj.getClass());
                                 arrayValues.add(obj.toString());
 
                             }
-                            
+
                         }
                     }
-                    
-                    if(isResource){
+
+                    if (isResource) {
                         parameters.addParameter(
-                        new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(bundle));
-                    }else{
+                                new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(bundle));
+                    } else {
                         parameters.addParameter(cqlcriteria, String.join(",", arrayValues));
                     }
-                    
-                }else if (cqlResult instanceof Resource){
-                    Resource resultres = (Resource)cqlResult;
+
+                } else if (cqlResult instanceof Resource) {
+                    Resource resultres = (Resource) cqlResult;
                     parameters.addParameter(
-                        new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(resultres));
-                }
-                else if(cqlResult instanceof Boolean){
-                    parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
-                    
-                }else if(cqlResult instanceof org.opencds.cqf.cql.runtime.Code){
-                    
+                            new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(resultres));
+                } else if (cqlResult instanceof Boolean) {
+                    parameters.addParameter(cqlcriteria, (Boolean) cqlResult);
+
+                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Code) {
+
                     CodeType codeType = new CodeType();
-                    org.opencds.cqf.cql.runtime.Code code = (org.opencds.cqf.cql.runtime.Code)cqlResult;
+                    org.opencds.cqf.cql.runtime.Code code = (org.opencds.cqf.cql.runtime.Code) cqlResult;
                     codeType.setSystem(code.getSystem());
                     codeType.setValue(code.getCode());
-                    
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(codeType);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Code"+code.getSystem());
-                }//parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
-                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Quantity){
-                    org.opencds.cqf.cql.runtime.Quantity qty = (org.opencds.cqf.cql.runtime.Quantity)cqlResult;
+                    System.out.println("casting to Code" + code.getSystem());
+                } // parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
+                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Quantity) {
+                    org.opencds.cqf.cql.runtime.Quantity qty = (org.opencds.cqf.cql.runtime.Quantity) cqlResult;
                     Quantity quantity = new Quantity();
                     quantity.setUnit(qty.getUnit());
                     quantity.setValue(qty.getValue());
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(quantity);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Quantity"+quantity);
-    
-                }else if(cqlResult instanceof HumanName){
-                    HumanName name = (HumanName)cqlResult;
+                    System.out.println("casting to Quantity" + quantity);
+
+                } else if (cqlResult instanceof HumanName) {
+                    HumanName name = (HumanName) cqlResult;
                     parameters.addParameter(cqlcriteria, name.getNameAsSingleString());
-                }
-                else if(cqlResult instanceof List){
+                } else if (cqlResult instanceof List) {
                     System.out.println("List list type");
-                    List resultList = (List)cqlResult;
-                    if (resultList.size()> 0 ){
+                    List resultList = (List) cqlResult;
+                    if (resultList.size() > 0) {
                         parameters.addParameter(cqlcriteria, resultList.toString());
-                    }else{
+                    } else {
                         parameters.addParameter(cqlcriteria, "");
                     }
-                    
+
                 }
-                
-                else if (cqlResult instanceof CodeType){
-                    CodeType codeType = (CodeType)cqlResult;
-                    
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+
+                else if (cqlResult instanceof CodeType) {
+                    CodeType codeType = (CodeType) cqlResult;
+
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(codeType);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Code"+codeType.getValue());
+                    System.out.println("casting to Code" + codeType.getValue());
 
-                }
-                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Date){
+                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Date) {
                     DateType date = new DateType();
-                    org.opencds.cqf.cql.runtime.Date cqlDate = (org.opencds.cqf.cql.runtime.Date)cqlResult;
+                    org.opencds.cqf.cql.runtime.Date cqlDate = (org.opencds.cqf.cql.runtime.Date) cqlResult;
                     date.setValueAsString(cqlDate.toString());
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(date);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Date"+date.asStringValue());
+                    System.out.println("casting to Date" + date.asStringValue());
 
-                }
-                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.DateTime){
+                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.DateTime) {
                     DateTimeType datetime = new DateTimeType();
-                    org.opencds.cqf.cql.runtime.DateTime cqlDate = (org.opencds.cqf.cql.runtime.DateTime)cqlResult;
+                    org.opencds.cqf.cql.runtime.DateTime cqlDate = (org.opencds.cqf.cql.runtime.DateTime) cqlResult;
                     datetime.setValueAsString(cqlDate.toString());
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(datetime);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Datetime "+datetime.asStringValue());
+                    System.out.println("casting to Datetime " + datetime.asStringValue());
 
-                }
-                else if (cqlResult instanceof DateTimeType){
-                    DateTimeType cqlDate = (DateTimeType)cqlResult;
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                } else if (cqlResult instanceof DateTimeType) {
+                    DateTimeType cqlDate = (DateTimeType) cqlResult;
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(cqlDate);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Datetime "+cqlDate.asStringValue());
+                    System.out.println("casting to Datetime " + cqlDate.asStringValue());
 
-                }
-                else if (cqlResult instanceof java.math.BigDecimal){
+                } else if (cqlResult instanceof java.math.BigDecimal) {
                     DecimalType decimal = new DecimalType();
-                    java.math.BigDecimal cqlDecimal = (java.math.BigDecimal)cqlResult;
+                    java.math.BigDecimal cqlDecimal = (java.math.BigDecimal) cqlResult;
                     decimal.setValue(cqlDecimal);
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(decimal);
                     parameters.addParameter(pc);
-                    System.out.println("casting to decimal"+decimal.asStringValue());
+                    System.out.println("casting to decimal" + decimal.asStringValue());
 
-                }
-                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Interval){
+                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Interval) {
                     Period cqlPeriod = new Period();
-                    System.out.println("received interval : "+cqlResult.toString());
+                    System.out.println("received interval : " + cqlResult.toString());
 
-                    org.opencds.cqf.cql.runtime.Interval cqlInterval = (org.opencds.cqf.cql.runtime.Interval)cqlResult;
-                    org.opencds.cqf.cql.runtime.DateTime startTime = (org.opencds.cqf.cql.runtime.DateTime)cqlInterval.getStart();
-                    org.opencds.cqf.cql.runtime.DateTime endTime = (org.opencds.cqf.cql.runtime.DateTime)cqlInterval.getEnd();
+                    org.opencds.cqf.cql.runtime.Interval cqlInterval = (org.opencds.cqf.cql.runtime.Interval) cqlResult;
+                    org.opencds.cqf.cql.runtime.DateTime startTime = (org.opencds.cqf.cql.runtime.DateTime) cqlInterval
+                            .getStart();
+                    org.opencds.cqf.cql.runtime.DateTime endTime = (org.opencds.cqf.cql.runtime.DateTime) cqlInterval
+                            .getEnd();
                     cqlPeriod.setStart(java.util.Date.from(startTime.getDateTime().toInstant()));
                     cqlPeriod.setEnd(java.util.Date.from(endTime.getDateTime().toInstant()));
-                    Parameters.ParametersParameterComponent pc = 
-                    new Parameters.ParametersParameterComponent().setName(cqlcriteria);
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
                     pc.setValue(cqlPeriod);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Period "+cqlPeriod.toString());
+                    System.out.println("casting to Period " + cqlPeriod.toString());
 
-                }
-                else if (cqlResult instanceof String){
-                    parameters.addParameter(cqlcriteria, (String)cqlResult);
+                } else if (cqlResult instanceof String) {
+                    parameters.addParameter(cqlcriteria, (String) cqlResult);
 
                 }
 
                 else {
                     System.out.println("Final no cast available");
-                    System.out.println("String value of result is "+cqlResult.toString());
+                    System.out.println("String value of result is " + cqlResult.toString());
                     parameters.addParameter(cqlcriteria, "");
-                    
+
                 }
 
             }
-            
-            
+
         }
-        
 
         return parameters;
     }
@@ -297,24 +286,25 @@ public class MeasureEvaluation {
         // Hack to clear expression cache
         // See cqf-ruler github issue #153
         // try {
-        //     Field privateField = Context.class.getDeclaredField("expressions");
-        //     privateField.setAccessible(true);
-        //     LinkedHashMap<String, Object> expressions = (LinkedHashMap<String, Object>) privateField.get(context);
-        //     expressions.clear();
+        // Field privateField = Context.class.getDeclaredField("expressions");
+        // privateField.setAccessible(true);
+        // LinkedHashMap<String, Object> expressions = (LinkedHashMap<String, Object>)
+        // privateField.get(context);
+        // expressions.clear();
 
         // } catch (Exception e) {
-        //     // TODO Auto-generated catch block
-        //     e.printStackTrace();
+        // // TODO Auto-generated catch block
+        // e.printStackTrace();
         // }
 
         logger.info("Evaluating expression :" + criteria);
 
-        if(context.resolveExpressionRef(criteria) == null){
+        if (context.resolveExpressionRef(criteria) == null) {
             logger.info("resolve expression is null");
         }
 
         Object result = context.resolveExpressionRef(criteria).evaluate(context);
-        
+
         return result;
 
     }
@@ -340,7 +330,7 @@ public class MeasureEvaluation {
             }
         }
 
-        return (Iterable)result;
+        return (Iterable) result;
 
     }
 
