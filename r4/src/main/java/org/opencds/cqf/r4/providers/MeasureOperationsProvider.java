@@ -270,7 +270,7 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "source") String source,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
 			@OperationParam(name = "patientServerToken") String patientServerToken,
-			@OperationParam(name = "preFetch", min = 1, max = 1, type = Bundle.class) Bundle preFetchBundle,
+			@OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OperationParam(name = "user") String user, @OperationParam(name = "parameters") Parameters parameters,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
         logger.info("in the library evaluate function");
@@ -296,10 +296,10 @@ public class MeasureOperationsProvider {
             }
 
 		}
-		if (preFetchBundle != null) {
+		if (dataBundle != null) {
 			local = false;
 			System.out.println("Received prefetch bundle");
-                nonLocal.put("preFetchBundle", preFetchBundle);
+                nonLocal.put("dataBundle", dataBundle);
 
         }
         if (!local) {

@@ -115,14 +115,14 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             }
         }
 
-        if (patient_fhir.get().containsKey("preFetchBundle")) {
-            IBaseBundle preFetchBundle = (IBaseBundle) patient_fhir.get().get("preFetchBundle");
+        if (patient_fhir.get().containsKey("dataBundle")) {
+            IBaseBundle dataBundle = (IBaseBundle) patient_fhir.get().get("dataBundle");
             boolean resourceFound = false;
-            if (preFetchBundle != null) {
+            if (dataBundle != null) {
                 local = false;
                 inMemory = true;
                 System.out.println("Going in memory retrieve: ");
-                List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, preFetchBundle);
+                List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, dataBundle);
                 System.out.println("parts.size(): " + parts.size());
                 if (parts.size() > 0) {
                     System.out.println("Inside looking for datatype: " + dataType);
@@ -131,7 +131,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
                         IBaseResource resource = (IBaseResource) next.getResource();
                         String resourceType = resource.fhirType();
                         if (resourceType.equals(dataType)) {
-                            resourceFound = false;
+                            resourceFound = true;
                             System.out.println("Adding to resourcelist : " + dataType);
                             resourceList.add(resource);
                         }
