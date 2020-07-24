@@ -134,12 +134,17 @@ public class ClaimProvider extends ClaimResourceProvider {
 	private String generateX12(String jsonStr) {
 		String x12_generated = "";
 		try {
+			// set envelpe to true to enclose generated x12 in soap envelope
+			JSONObject x12request = new JSONObject();
+			x12request.put("claim_json", jsonStr);
+			x12request.put("envelope","true");
+			String x12Str = x12request.toString();
 			// System.out.println("JSON:\n" + jsonStr);
 
 			StringBuilder sb = new StringBuilder();
 			String str_result = "";
 			URL url = new URL(HapiProperties.getProperty("x12_generator_url"));
-			byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+			byte[] postDataBytes = x12Str.getBytes("UTF-8");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_generator_key"));
 			conn.setRequestMethod("POST");
