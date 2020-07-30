@@ -344,7 +344,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 					// Submit the generated X12 to the payer url
 					String x12_response = submitX12(x12_generated, retVal, x12SubmitUrl);
 					// Send the response received from X12 submission for getting relevant data
-					if (x12_response.length() > 0) {
+					
+					if ((x12_response != null) && (x12_response.length() > 0) ){
 						// If Error on 999 received, don't store claim response
 						if (x12_response.toLowerCase().contains("error")) {
 							retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
