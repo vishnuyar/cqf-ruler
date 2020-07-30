@@ -161,7 +161,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 				this.errors = response.getJSONArray("errors");
 			}
 			System.out.println("Errors:" + errors);
-			System.out.println("\n x12_generated :" + x12_generated);
+			// System.out.println("\n x12_generated :" + x12_generated);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
