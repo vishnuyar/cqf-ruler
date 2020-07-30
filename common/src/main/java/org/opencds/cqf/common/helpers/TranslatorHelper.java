@@ -18,7 +18,7 @@ import org.opencds.cqf.cql.execution.CqlLibraryReader;
 
 public class TranslatorHelper {
 
-    public static Library readLibrary(InputStream xmlStream) {
+    public synchronized static Library readLibrary(InputStream xmlStream) {
         try {
             return CqlLibraryReader.read(xmlStream);
         } catch (IOException | JAXBException e) {

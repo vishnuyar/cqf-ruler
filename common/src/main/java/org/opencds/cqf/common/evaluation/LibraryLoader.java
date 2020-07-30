@@ -72,12 +72,13 @@ public class LibraryLoader implements org.opencds.cqf.cql.execution.LibraryLoade
         return version == null ? id : id + "-" + version;
     }
 
-    private Library loadLibrary(VersionedIdentifier libraryIdentifier) {
+    private synchronized Library loadLibrary(VersionedIdentifier libraryIdentifier) {
         org.hl7.elm.r1.VersionedIdentifier identifier = new org.hl7.elm.r1.VersionedIdentifier()
                 .withId(libraryIdentifier.getId()).withSystem(libraryIdentifier.getSystem())
                 .withVersion(libraryIdentifier.getVersion());
 
         ArrayList<CqlTranslatorException> errors = new ArrayList<>();
+        
         org.hl7.elm.r1.Library translatedLibrary = libraryManager.resolveLibrary(identifier, ErrorSeverity.Error,
                 SignatureLevel.All,
                 new CqlTranslator.Options[] { CqlTranslator.Options.EnableAnnotations,
@@ -94,7 +95,13 @@ public class LibraryLoader implements org.opencds.cqf.cql.execution.LibraryLoade
             if (translator.getErrors().size() > 0) {
                 throw new IllegalArgumentException(errorsToString(translator.getErrors()));
             }
-
+            if (libraryIdentifier == null) {
+            	System.out.println("Library identifier is null");
+            }
+            System.out.println("The library Identidier is " + libraryIdentifier.getId());
+            if(translatedLibrary == null) {
+            	System.out.println("Transalated library is null");
+            }
             return readLibrary(new ByteArrayInputStream(
                     translator.convertToXml(translatedLibrary).getBytes(StandardCharsets.UTF_8)));
         } catch (JAXBException e) {
