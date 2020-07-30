@@ -100,34 +100,47 @@ public class ClaimProvider extends ClaimResourceProvider {
 		return saltStr;
 	}
 
-	private String submitX12(String x12_generated, ClaimResponse claimResponse, String strUrl) {
-		String str_result = "";
-		try {
-			// POST call for token
-			StringBuilder sb = new StringBuilder();
 
-			URL url = new URL(strUrl);
-			byte[] postDataBytes = x12_generated.getBytes("UTF-8");
+	private String postHttpRequest(String Url, byte[] requestData, String apiKey){
+		String httpResponse = null;
+		try{
+			StringBuilder sb = new StringBuilder();
+			URL url = new URL(Url);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			// conn.setRequestProperty("x-api-key",HapiProperties.getProperty("x12_generator_key")
-			// );
+			if (apiKey !=null){
+				conn.setRequestProperty("x-api-key", apiKey);
+			}
 			conn.setRequestMethod("POST");
 			conn.setRequestProperty("Content-Type", "text/plain");
 			conn.setRequestProperty("Accept", "text/plain");
 			conn.setDoOutput(true);
-			conn.getOutputStream().write(postDataBytes);
+			conn.getOutputStream().write(requestData);
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
 			String line = null;
 			while ((line = in.readLine()) != null) {
 				sb.append(line);
 			}
-			str_result = sb.toString();
-			System.out.println("\n  X12 Submission reponse :\n" + str_result);
+			httpResponse = sb.toString();
+			conn.disconnect();
 
-			// }
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+		
+		return httpResponse;
+	}
+
+	private String submitX12(String x12_generated, ClaimResponse claimResponse, String strUrl) {
+		String str_result = "";
+		try{
+			byte[] postDataBytes = x12_generated.getBytes("UTF-8");
+			str_result = postHttpRequest(strUrl,postDataBytes,null);
+
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		
+		System.out.println("\n  X12 Submission reponse :\n" + str_result);
 		return str_result;
 	}
 
@@ -139,42 +152,15 @@ public class ClaimProvider extends ClaimResourceProvider {
 			x12request.put("claim_json", jsonStr);
 			x12request.put("envelope","true");
 			String x12Str = x12request.toString();
-			// System.out.println("JSON:\n" + jsonStr);
-
-			StringBuilder sb = new StringBuilder();
-			String str_result = "";
-			URL url = new URL(HapiProperties.getProperty("x12_generator_url"));
+			String strUrl = HapiProperties.getProperty("x12_generator_url");
+			String apiKey = HapiProperties.getProperty("x12_generator_key");
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_generator_key"));
-			conn.setRequestMethod("POST");
-			conn.setRequestProperty("Content-Type", "application/json");
-			conn.setRequestProperty("Accept", "application/json");
-			conn.setDoOutput(true);
-			conn.getOutputStream().write(postDataBytes);
-
-			if (conn.getResponseCode() == 200) {
-				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-				String line = null;
-				while ((line = in.readLine()) != null) {
-					sb.append(line);
-				}
-				x12_generated = sb.toString();
-			} else {
-				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"));
-				String line = null;
-				while ((line = in.readLine()) != null) {
-					sb.append(line);
-				}
-				System.out.println(sb.toString());
-				JSONObject response = new JSONObject(sb.toString());
-				if (response.has("errors")) {
-					this.errors = response.getJSONArray("errors");
-				}
-
+			x12_generated = postHttpRequest(strUrl,postDataBytes,apiKey);
+			if (x12_generated.contains("errors")) {
+				JSONObject response = new JSONObject(x12_generated);
+				this.errors = response.getJSONArray("errors");
 			}
 			System.out.println("Errors:" + errors);
-
 			System.out.println("\n x12_generated :" + x12_generated);
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -187,25 +173,15 @@ public class ClaimProvider extends ClaimResourceProvider {
 		try {
 
 			StringBuilder sb = new StringBuilder();
-			URL url = new URL(HapiProperties.getProperty("x12_reader_url"));
+			String url = HapiProperties.getProperty("x12_reader_url");
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setRequestProperty("x-api-key", HapiProperties.getProperty("x12_reader_key"));
-			conn.setRequestMethod("POST");
-			conn.setRequestProperty("Content-Type", "application/json");
-			conn.setRequestProperty("Accept", "application/json");
-			conn.setDoOutput(true);
-			conn.getOutputStream().write(postDataBytes);
-
-			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-			String line = null;
-			while ((line = in.readLine()) != null) {
-				sb.append(line);
+			String apiKey = HapiProperties.getProperty("x12_reader_key");
+			String httpResponse = postHttpRequest(url,postDataBytes,apiKey);
+			System.out.println("\n x12response :" + httpResponse);
+			if (httpResponse != null){
+				IParser parser = FhirContext.forR4().newJsonParser();
+				response = parser.parseResource(ClaimResponse.class, httpResponse);
 			}
-			System.out.println("\n x12response :" + sb.toString());
-			IParser parser = FhirContext.forR4().newJsonParser();
-			response = parser.parseResource(ClaimResponse.class, sb.toString());
-
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
