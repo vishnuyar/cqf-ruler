@@ -237,7 +237,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 	}
 
 	private String getPayerURL(Claim claim) {
-		String payerURL = "https://k8s0lhnvt2.execute-api.us-east-2.amazonaws.com/default/payer_x12";
+		String payerURL = "https://fhir-dev.mettles.com/payer/submission";
+		//String payerURL = "https://k8s0lhnvt2.execute-api.us-east-2.amazonaws.com/default/payer_x12";
 		// from claim get "insurer reference"
 		// from reference get resource
 		// from resource get name
