@@ -275,11 +275,11 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
         logger.info("in the library evaluate function");
         logger.info("library id: " + libraryId);
-        logger.info("criteria:" + criteria);
-        logger.info("periodStart:" + periodStart);
-        logger.info("patientRef:" + patientRef);
-        logger.info("patientServerUrl:" + patientServerUrl);
-        logger.info("patientServerToken:" + patientServerToken);
+        // logger.info("criteria:" + criteria);
+        // logger.info("periodStart:" + periodStart);
+        // logger.info("patientRef:" + patientRef);
+        // logger.info("patientServerUrl:" + patientServerUrl);
+        // logger.info("patientServerToken:" + patientServerToken);
         // Setting server url and token for non local data access
         HashMap<String, Object> nonLocal = new HashMap<>();
         Boolean local = true;
@@ -298,7 +298,7 @@ public class MeasureOperationsProvider {
 		}
 		if (dataBundle != null) {
 			local = false;
-			System.out.println("Received prefetch bundle");
+			// System.out.println("Received prefetch bundle");
                 nonLocal.put("dataBundle", dataBundle);
 
         }
@@ -319,8 +319,8 @@ public class MeasureOperationsProvider {
         Library library = seed.getLibrary();
         if (parameters != null) {
             for (Parameters.ParametersParameterComponent pc : parameters.getParameter()) {
-                System.out.println("PC name: " + pc.getName());
-                System.out.println("PC resource: " + pc.getResource());
+                // System.out.println("PC name: " + pc.getName());
+                // System.out.println("PC resource: " + pc.getResource());
                 context.setParameter(null, pc.getName(), pc.getResource());
             }
         }
