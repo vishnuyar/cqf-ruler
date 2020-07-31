@@ -89,7 +89,7 @@ public class MeasureEvaluation {
             Patient patient = (Patient) iterator.next();
             patients.add(patient);
         }
-        logger.info("patients available!!" + patients.size());
+        // logger.info("patients available!!" + patients.size());
 
         return patients;
     }
@@ -105,8 +105,8 @@ public class MeasureEvaluation {
         ArrayList<String> cqldef = new ArrayList<String>();
         if (criteria.equals("EvaluateCQL")) {
             for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
-                System.out.println("Expression Type :" + expressionDef.getClass().getName());
-                System.out.println("Expression :" + expressionDef.getName());
+                // System.out.println("Expression Type :" + expressionDef.getClass().getName());
+                // System.out.println("Expression :" + expressionDef.getName());
                 if (!(expressionDef instanceof org.cqframework.cql.elm.execution.FunctionDef)) {
                     cqldef.add(expressionDef.getName());
                 }
@@ -132,7 +132,7 @@ public class MeasureEvaluation {
                     int count = 0;
                     for (Object obj : (Iterable<Object>) cqlResult) {
                         count += 1;
-                        System.out.println("The count of obj is: " + count);
+                        // System.out.println("The count of obj is: " + count);
                         if (obj instanceof Resource) {
                             isResource = true;
                             bundle.addEntry(new Bundle.BundleEntryComponent().setResource((Resource) obj));
@@ -182,13 +182,13 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(quantity);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Quantity" + quantity);
+                    // System.out.println("casting to Quantity" + quantity);
 
                 } else if (cqlResult instanceof HumanName) {
                     HumanName name = (HumanName) cqlResult;
                     parameters.addParameter(cqlcriteria, name.getNameAsSingleString());
                 } else if (cqlResult instanceof List) {
-                    System.out.println("List list type");
+                    // System.out.println("List list type");
                     List resultList = (List) cqlResult;
                     if (resultList.size() > 0) {
                         parameters.addParameter(cqlcriteria, resultList.toString());
@@ -205,7 +205,7 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(codeType);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Code" + codeType.getValue());
+                    // System.out.println("casting to Code" + codeType.getValue());
 
                 } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Date) {
                     DateType date = new DateType();
@@ -215,7 +215,7 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(date);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Date" + date.asStringValue());
+                    // System.out.println("casting to Date" + date.asStringValue());
 
                 } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.DateTime) {
                     DateTimeType datetime = new DateTimeType();
@@ -225,7 +225,7 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(datetime);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Datetime " + datetime.asStringValue());
+                    // System.out.println("casting to Datetime " + datetime.asStringValue());
 
                 } else if (cqlResult instanceof DateTimeType) {
                     DateTimeType cqlDate = (DateTimeType) cqlResult;
@@ -233,7 +233,7 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(cqlDate);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Datetime " + cqlDate.asStringValue());
+                    // System.out.println("casting to Datetime " + cqlDate.asStringValue());
 
                 } else if (cqlResult instanceof java.math.BigDecimal) {
                     DecimalType decimal = new DecimalType();
@@ -243,11 +243,11 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(decimal);
                     parameters.addParameter(pc);
-                    System.out.println("casting to decimal" + decimal.asStringValue());
+                    // System.out.println("casting to decimal" + decimal.asStringValue());
 
                 } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Interval) {
                     Period cqlPeriod = new Period();
-                    System.out.println("received interval : " + cqlResult.toString());
+                    // System.out.println("received interval : " + cqlResult.toString());
 
                     org.opencds.cqf.cql.runtime.Interval cqlInterval = (org.opencds.cqf.cql.runtime.Interval) cqlResult;
                     org.opencds.cqf.cql.runtime.DateTime startTime = (org.opencds.cqf.cql.runtime.DateTime) cqlInterval
@@ -260,7 +260,7 @@ public class MeasureEvaluation {
                             .setName(cqlcriteria);
                     pc.setValue(cqlPeriod);
                     parameters.addParameter(pc);
-                    System.out.println("casting to Period " + cqlPeriod.toString());
+                    // System.out.println("casting to Period " + cqlPeriod.toString());
 
                 } else if (cqlResult instanceof String) {
                     parameters.addParameter(cqlcriteria, (String) cqlResult);

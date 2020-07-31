@@ -114,9 +114,9 @@ public class MeasureEvaluationSeed
         
         for (Triple<String,String,String> def : usingDefs)
         {
-            logger.info("get dataprovider");
+            // logger.info("get dataprovider");
             this.dataProvider = this.providerFactory.createDataProvider(def.getLeft(), def.getMiddle(), terminologyProvider);
-            logger.info("set context dataprovider");
+            //logger.info("set context dataprovider");
             context.registerDataProvider(
                 def.getRight(), 
                 dataProvider);
@@ -124,10 +124,10 @@ public class MeasureEvaluationSeed
 
 
         // resolve the measurement period
-        logger.info("set interval");
+        //logger.info("set interval");
         measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
                 DateHelper.resolveRequestDate(periodEnd, false), true);
-        logger.info("set measurement period");
+        //logger.info("set measurement period");
         context.setParameter(null, "Measurement Period",
                 new Interval(DateTime.fromJavaDate((Date) measurementPeriod.getStart()), true,
                         DateTime.fromJavaDate((Date) measurementPeriod.getEnd()), true));
@@ -135,7 +135,7 @@ public class MeasureEvaluationSeed
         if (productLine != null) {
             context.setParameter(null, "Product Line", productLine);
         }
-        logger.info("seed setup complete");
+        //logger.info("seed setup complete");
         context.setExpressionCaching(true);
     }
 }
