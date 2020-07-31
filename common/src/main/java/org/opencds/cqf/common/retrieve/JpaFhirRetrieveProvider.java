@@ -110,7 +110,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             String nonlocal_url = (String) patient_fhir.get().get("patient_server_url");
             if (!nonlocal_url.equals("")) {
                 local = false;
-                System.out.println("Going non local: " + nonlocal_url);
+                // System.out.println("Going non local: " + nonlocal_url);
                 purl = nonlocal_url;
             }
         }
@@ -121,18 +121,18 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
             if (dataBundle != null) {
                 local = false;
                 inMemory = true;
-                System.out.println("Going in memory retrieve: ");
+                // System.out.println("Going in memory retrieve: ");
                 List<BundleEntryParts> parts = BundleUtil.toListOfEntries(myFhirContext, dataBundle);
-                System.out.println("parts.size(): " + parts.size());
+                // System.out.println("parts.size(): " + parts.size());
                 if (parts.size() > 0) {
-                    System.out.println("Inside looking for datatype: " + dataType);
+                    // System.out.println("Inside looking for datatype: " + dataType);
                     for (Iterator<BundleEntryParts> iterator = parts.iterator(); iterator.hasNext();) {
                         BundleEntryParts next = iterator.next();
                         IBaseResource resource = (IBaseResource) next.getResource();
                         String resourceType = resource.fhirType();
                         if (resourceType.equals(dataType)) {
                             resourceFound = true;
-                            System.out.println("Adding to resourcelist : " + dataType);
+                            //System.out.println("Adding to resourcelist : " + dataType);
                             resourceList.add(resource);
                         }
 
@@ -177,7 +177,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
                     }
                     searchURL = BundleUtil.getLinkUrlOfType(myFhirContext, bundle, bundle.LINK_NEXT);
-                    System.out.println("next: " + searchURL);
+                    // System.out.println("next: " + searchURL);
                 }
             }
 
@@ -193,7 +193,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
         if (local) {
             IBundleProvider bundleProvider = dao.search(map);
             if (bundleProvider.size() == null) {
-                ourLog.info("Caching : " + searchURL);
+                //ourLog.info("Caching : " + searchURL);
                 Collection<Object> queryResult = resolveResourceList(bundleProvider.getResources(0, 10000));
                 // cacheQueries.put(searchURL,queryResult);
                 return queryResult;
