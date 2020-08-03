@@ -100,21 +100,23 @@ public class MeasureEvaluation {
         return evaluate(measure, context, getAllPatients(), MeasureReport.MeasureReportType.SUMMARY);
     }
 
-    public Parameters cqlEvaluate(Context context, String patientId, String criteria, Library lib) {
+    public Parameters cqlEvaluate(Context context, String patientId, ArrayList<String> criteriaList, Library lib) {
         Parameters parameters = new Parameters();
         ArrayList<String> cqldef = new ArrayList<String>();
-        if (criteria.equals("EvaluateCQL")) {
-            for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
-                // System.out.println("Expression Type :" + expressionDef.getClass().getName());
-                // System.out.println("Expression :" + expressionDef.getName());
-                if (!(expressionDef instanceof org.cqframework.cql.elm.execution.FunctionDef)) {
-                    cqldef.add(expressionDef.getName());
+        for (String criteria : criteriaList ){
+            if (criteria.equals("EvaluateCQL")) {
+                for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
+                    // System.out.println("Expression Type :" + expressionDef.getClass().getName());
+                    // System.out.println("Expression :" + expressionDef.getName());
+                    if (!(expressionDef instanceof org.cqframework.cql.elm.execution.FunctionDef)) {
+                        cqldef.add(expressionDef.getName());
+                    }
+
                 }
+            } else {
+                cqldef.add(criteria);
 
             }
-        } else {
-            cqldef.add(criteria);
-
         }
 
         for (String cqlcriteria : cqldef) {

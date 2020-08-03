@@ -269,18 +269,35 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "periodStart") String periodStart,
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "source") String source,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
-			@OperationParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "criteriaList") String criteriaList,
 			@OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OperationParam(name = "user") String user, @OperationParam(name = "parameters") Parameters parameters,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
+        
+        ArrayList<String> evalCriterias = new ArrayList<>();
+        
         logger.info("in the library evaluate function");
         logger.info("library id: " + libraryId);
-        // logger.info("criteria:" + criteria);
+        logger.info("criteria:" + criteria);
+        logger.info("criteria:" + criteriaList);
+        
         // logger.info("periodStart:" + periodStart);
         // logger.info("patientRef:" + patientRef);
         // logger.info("patientServerUrl:" + patientServerUrl);
         // logger.info("patientServerToken:" + patientServerToken);
         // Setting server url and token for non local data access
+        if (criteria == null && criteriaList == null){
+            throw new RuntimeException("Either Criteria or Criteria List should be given");
+        }
+        if (criteria != null){
+            evalCriterias.add(criteria);
+        } else {
+            String[] cList = criteriaList.split(",");
+            for (String crit:cList){
+                evalCriterias.add(crit);
+            }
+        }
         HashMap<String, Object> nonLocal = new HashMap<>();
         Boolean local = true;
         if (patientServerUrl != null) {
@@ -327,7 +344,7 @@ public class MeasureOperationsProvider {
         Parameters result = new Parameters();
         try {
 
-            result = evaluator.cqlEvaluate(context, patientRef, criteria, library);
+            result = evaluator.cqlEvaluate(context, patientRef, evalCriterias, library);
 
         } catch (RuntimeException re) {
             re.printStackTrace();

@@ -102,7 +102,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 
 
 	private String postHttpRequest(String Url, byte[] requestData, String apiKey){
-		String httpResponse = null;
+		String httpResponse = "";
 		try{
 			StringBuilder sb = new StringBuilder();
 			URL url = new URL(Url);
@@ -156,11 +156,13 @@ public class ClaimProvider extends ClaimResourceProvider {
 			String apiKey = HapiProperties.getProperty("x12_generator_key");
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
 			x12_generated = postHttpRequest(strUrl,postDataBytes,apiKey);
-			if (x12_generated.contains("errors")) {
-				JSONObject response = new JSONObject(x12_generated);
-				this.errors = response.getJSONArray("errors");
+			if (x12_generated.length() >1){
+				if (x12_generated.contains("errors")) {
+					JSONObject response = new JSONObject(x12_generated);
+					this.errors = response.getJSONArray("errors");
+				}
+				System.out.println("Errors:" + errors);
 			}
-			System.out.println("Errors:" + errors);
 			// System.out.println("\n x12_generated :" + x12_generated);
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -178,7 +180,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 			String apiKey = HapiProperties.getProperty("x12_reader_key");
 			String httpResponse = postHttpRequest(url,postDataBytes,apiKey);
 			System.out.println("\n x12response :" + httpResponse);
-			if (httpResponse != null){
+			if (httpResponse.length() > 1){
 				IParser parser = FhirContext.forR4().newJsonParser();
 				response = parser.parseResource(ClaimResponse.class, httpResponse);
 			}
@@ -295,10 +297,14 @@ public class ClaimProvider extends ClaimResourceProvider {
 		Patient serverPatient = null;
 		Claim claim = null;
 		Bundle responseBundle = new Bundle();
+		Bundle claimBundle = new Bundle();
 		ClaimResponse claimResponse = null;
 		List<ErrorComponent> errorList = new ArrayList<ErrorComponent>();
 		try {
 			for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+				if (!entry.getResource().getResourceType().toString().equals("DocumentReference")){
+					claimBundle.addEntry(entry);
+				}
 				if (entry.getResource().getResourceType().toString().equals("Claim")) {
 					try {
 						claim = (Claim) entry.getResource();
@@ -314,11 +320,12 @@ public class ClaimProvider extends ClaimResourceProvider {
 					}
 				}
 			}
-
+			// 
 			ClaimResponse retVal = generateClaimResponse(patient, claim);
 			if (!HapiProperties.getProperty("x12_generator_key").equals("")) {
 				IParser jsonParser = details.getFhirContext().newJsonParser();
-				String jsonStr = jsonParser.encodeResourceToString(bundle);
+				String jsonStr = jsonParser.encodeResourceToString(claimBundle);
+				System.out.println("claim without document reference"+jsonStr);
 				String x12_generated = generateX12(jsonStr);
 				if ((this.errors.length() > 0) | (x12_generated.length() < 5)) {
 					retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
