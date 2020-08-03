@@ -301,6 +301,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 		ClaimResponse claimResponse = null;
 		List<ErrorComponent> errorList = new ArrayList<ErrorComponent>();
 		try {
+			claimBundle.setType(bundle.getType());
+			claimBundle.setIdentifier(bundle.getIdentifier());
 			for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
 				if (!entry.getResource().getResourceType().toString().equals("DocumentReference")){
 					claimBundle.addEntry(entry);
@@ -325,7 +327,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 			if (!HapiProperties.getProperty("x12_generator_key").equals("")) {
 				IParser jsonParser = details.getFhirContext().newJsonParser();
 				String jsonStr = jsonParser.encodeResourceToString(claimBundle);
-				System.out.println("claim without document reference"+jsonStr);
+				//System.out.println("claim without document reference"+jsonStr);
 				String x12_generated = generateX12(jsonStr);
 				if ((this.errors.length() > 0) | (x12_generated.length() < 5)) {
 					retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
