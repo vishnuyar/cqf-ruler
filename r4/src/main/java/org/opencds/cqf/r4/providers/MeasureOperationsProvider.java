@@ -62,6 +62,7 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.annotation.IdParam;
@@ -88,7 +89,8 @@ public class MeasureOperationsProvider {
     private MeasureResourceProvider measureResourceProvider;
     private DaoRegistry registry;
     private EvaluationProviderFactory factory;
-    private IFhirResourceDao<org.hl7.fhir.r4.model.Library> bundleDao;
+    private LibraryResourceProvider defaultLibraryResourceProvider;
+    
 
     private static final Logger logger = LoggerFactory.getLogger(MeasureOperationsProvider.class);
 
@@ -98,12 +100,22 @@ public class MeasureOperationsProvider {
             MeasureResourceProvider measureResourceProvider) {
         this.registry = registry;
         this.factory = factory;
-        this.bundleDao = libraryResolutionProvider.gettDao();
+        
         this.libraryResolutionProvider = libraryResolutionProvider;
         this.narrativeProvider = narrativeProvider;
         this.hqmfProvider = hqmfProvider;
         this.dataRequirementsProvider = new DataRequirementsProvider();
         this.measureResourceProvider = measureResourceProvider;
+    }
+    public MeasureOperationsProvider(DaoRegistry registry, EvaluationProviderFactory factory,
+            NarrativeProvider narrativeProvider, HQMFProvider hqmfProvider,
+            LibraryResourceProvider libraryResourceProvider,
+            MeasureResourceProvider measureResourceProvider) {
+        this(registry,factory,narrativeProvider,hqmfProvider, new LibraryOperationsProvider
+        		(libraryResourceProvider, narrativeProvider),measureResourceProvider);
+        this.defaultLibraryResourceProvider = libraryResourceProvider;
+        
+
     }
 
     @Operation(name = "$hqmf", idempotent = true, type = Measure.class)
@@ -334,7 +346,12 @@ public class MeasureOperationsProvider {
             JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
         }
         
-        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
+        LibraryResourceProvider rp = new LibraryResourceProvider();
+        rp.setDao(defaultLibraryResourceProvider.getDao());
+        
+        
+        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(new LibraryOperationsProvider
+        		(rp, this.narrativeProvider));
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                     this.libraryResolutionProvider);
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
@@ -342,12 +359,7 @@ public class MeasureOperationsProvider {
         Context context = null;
         Library library = null;
         
-        if(libBundle != null ){
-            System.out.println("Setting libBundle as dao");
-
-            LibraryBundleDao libDao = new LibraryBundleDao(libBundle);
-            this.libraryResolutionProvider.setDao(libDao);
-        }
+        
         seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
         context = seed.getContext();
         library = seed.getLibrary();
@@ -369,7 +381,6 @@ public class MeasureOperationsProvider {
             String message = re.getMessage() != null ? re.getMessage() : re.getClass().getName();
             result.addParameter().setName("error").setValue(new StringType(message));
         }
-        this.libraryResolutionProvider.setDao(this.bundleDao);
         return result;
 
     }
