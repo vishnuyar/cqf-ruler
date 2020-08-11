@@ -1,5 +1,6 @@
 package org.opencds.cqf.r4.providers;
 
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
@@ -32,6 +34,8 @@ import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.StringType;
+import org.cqframework.cql.cql2elm.LibraryManager;
+import org.cqframework.cql.cql2elm.ModelManager;
 import org.cqframework.cql.elm.execution.Library;
 import org.hl7.fhir.MeasureScoring;
 import org.hl7.fhir.exceptions.FHIRException;
@@ -41,6 +45,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
+import org.opencds.cqf.common.helpers.TranslatorHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 import org.opencds.cqf.cql.execution.Context;
@@ -56,6 +61,7 @@ import org.slf4j.LoggerFactory;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.annotation.IdParam;
@@ -82,6 +88,7 @@ public class MeasureOperationsProvider {
     private MeasureResourceProvider measureResourceProvider;
     private DaoRegistry registry;
     private EvaluationProviderFactory factory;
+    private IFhirResourceDao<org.hl7.fhir.r4.model.Library> bundleDao;
 
     private static final Logger logger = LoggerFactory.getLogger(MeasureOperationsProvider.class);
 
@@ -91,7 +98,7 @@ public class MeasureOperationsProvider {
             MeasureResourceProvider measureResourceProvider) {
         this.registry = registry;
         this.factory = factory;
-
+        this.bundleDao = libraryResolutionProvider.gettDao();
         this.libraryResolutionProvider = libraryResolutionProvider;
         this.narrativeProvider = narrativeProvider;
         this.hqmfProvider = hqmfProvider;
@@ -271,7 +278,8 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "criteriaList") String criteriaList,
-			@OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
+            @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
+            @OperationParam(name = "libBundle", min = 1, max = 1, type = Bundle.class) Bundle libBundle,
             @OperationParam(name = "user") String user, @OperationParam(name = "parameters") Parameters parameters,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
         
@@ -280,7 +288,7 @@ public class MeasureOperationsProvider {
         logger.info("in the library evaluate function");
         logger.info("library id: " + libraryId);
         logger.info("criteria:" + criteria);
-        logger.info("criteria:" + criteriaList);
+        logger.info("criteriaList:" + criteriaList);
         
         // logger.info("periodStart:" + periodStart);
         // logger.info("patientRef:" + patientRef);
@@ -297,6 +305,9 @@ public class MeasureOperationsProvider {
             for (String crit:cList){
                 evalCriterias.add(crit);
             }
+        }
+        if (libraryId == null){
+            throw new RuntimeException(" LibraryId cannot be null");
         }
         HashMap<String, Object> nonLocal = new HashMap<>();
         Boolean local = true;
@@ -322,18 +333,24 @@ public class MeasureOperationsProvider {
         if (!local) {
             JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
         }
-
+        
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
-                this.libraryResolutionProvider);
-
-        seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
-
+                    this.libraryResolutionProvider);
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
-                seed.getMeasurementPeriod());
-        // Add the type of Request
-        Context context = seed.getContext();
-        Library library = seed.getLibrary();
+                    seed.getMeasurementPeriod());
+        Context context = null;
+        Library library = null;
+        
+        if(libBundle != null ){
+            System.out.println("Setting libBundle as dao");
+
+            LibraryBundleDao libDao = new LibraryBundleDao(libBundle);
+            this.libraryResolutionProvider.setDao(libDao);
+        }
+        seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
+        context = seed.getContext();
+        library = seed.getLibrary();
         if (parameters != null) {
             for (Parameters.ParametersParameterComponent pc : parameters.getParameter()) {
                 // System.out.println("PC name: " + pc.getName());
@@ -352,7 +369,9 @@ public class MeasureOperationsProvider {
             String message = re.getMessage() != null ? re.getMessage() : re.getClass().getName();
             result.addParameter().setName("error").setValue(new StringType(message));
         }
+        this.libraryResolutionProvider.setDao(this.bundleDao);
         return result;
+
     }
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
@@ -705,4 +724,6 @@ public class MeasureOperationsProvider {
         }
         return transactionEntry;
     }
+
+    
 }
