@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -25,11 +26,13 @@ import org.hl7.fhir.ClaimResponseItem;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
+import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.ClaimResponse;
 import org.hl7.fhir.r4.model.ClaimResponse.ErrorComponent;
 import org.hl7.fhir.r4.model.ClaimResponse.Use;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
@@ -71,6 +74,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 	IFhirResourceDao<Patient> patientDao;
 	DaoRegistry registry;
 	JSONArray errors = new JSONArray();
+	IParser parser = FhirContext.forR4().newJsonParser();
 
 	public ClaimProvider(ApplicationContext appCtx) {
 		this.bundleDao = (IFhirResourceDao<Bundle>) appCtx.getBean("myBundleDaoR4", IFhirResourceDao.class);
@@ -104,6 +108,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 	private String postHttpRequest(String Url, byte[] requestData, String apiKey){
 		String httpResponse = "";
 		try{
+			System.out.println("Posting to: "+Url);
 			StringBuilder sb = new StringBuilder();
 			URL url = new URL(Url);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -192,7 +197,6 @@ public class ClaimProvider extends ClaimResourceProvider {
 
 	private ClaimResponse generateClaimResponse(Patient patient, Claim claim) {
 		ClaimResponse retVal = new ClaimResponse();
-
 		try {
 
 			if (claim != null) {
@@ -238,8 +242,62 @@ public class ClaimProvider extends ClaimResourceProvider {
 		return retVal;
 	}
 
-	private String getPayerURL(Claim claim) {
-		String payerURL = "https://fhir-dev.mettles.com/payer/submission";
+	private String getPayerURL(Bundle bundle,Claim claim) {
+		String payerURL = "";
+		String insurerID = claim.getInsurer().getReference().replace("Organization/", "");
+		System.out.println("INS: "+insurerID);
+		System.out.println(bundle.getEntry().size());
+		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+//			System.out.println("is Insurer: "+" "+entry.getResource().getIdElement().getIdPart() +" ,"+entry.getResource().getIdElement().getIdPart().equals(insurerID));
+//			System.out.println("is Insurer: "+entry.getResource().getResourceType()+" "+entry.getResource().getResourceType().equals("Organization"));
+			if ( entry.getResource().getIdElement().getIdPart().equals(insurerID)) {
+				Organization insurer = (Organization)entry.getResource();
+				String name = insurer.getName();
+				JSONObject params = new JSONObject();
+				System.out.println("Insurer name: "+name);
+				try {
+					params.put("payer_name",name );
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				byte[] postDataBytes = null;
+				try {
+					postDataBytes = params.toString().getBytes("UTF-8");
+				} catch (UnsupportedEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				String searchURL = "https://sm.mettles.com/cds/searchPayer";
+				String httpResponse = postHttpRequest(searchURL,postDataBytes,null);
+				JSONObject searchResObj;
+				
+				
+				if (httpResponse.length() > 1){
+					try {
+						searchResObj = new JSONObject(httpResponse);
+						if(searchResObj.has("entry")) {
+							JSONArray entries = new JSONArray(searchResObj.get("entry").toString());
+							for(int i=0; i<entries.length();i++) {
+								JSONObject resource = entries.getJSONObject(i);
+								if(resource.getString("resourceType").equals("Endpoint")){
+									Endpoint endpoint = parser.parseResource(Endpoint.class, resource.toString());
+									if (endpoint.getName().contains("X12")) {
+										return endpoint.getAddress();
+									}
+								}
+							}
+						}
+					} catch (JSONException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+				
+			}
+			
+		}
 		//String payerURL = "https://k8s0lhnvt2.execute-api.us-east-2.amazonaws.com/default/payer_x12";
 		// from claim get "insurer reference"
 		// from reference get resource
@@ -350,7 +408,10 @@ public class ClaimProvider extends ClaimResourceProvider {
 				} else {
 					String x12SubmitUrl;
 					// Need to implement the below function
-					x12SubmitUrl = getPayerURL(claim);
+					x12SubmitUrl = getPayerURL(bundle,claim);
+					System.out.println("x12SubmitUrl "+x12SubmitUrl);
+					System.out.println(x12SubmitUrl);
+					
 					// Submit the generated X12 to the payer url
 					String x12_response = submitX12(x12_generated, retVal, x12SubmitUrl);
 					// Send the response received from X12 submission for getting relevant data
