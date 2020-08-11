@@ -23,6 +23,7 @@ import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.param.StringParam;
@@ -172,6 +173,13 @@ public class LibraryOperationsProvider implements LibraryResolutionProvider<org.
         List<IBaseResource> resourceList = bundleProvider.getResources(0, bundleProvider.size());
         return resolveLibraries(resourceList);
     }
+    
+    public void setDao(IFhirResourceDao<Library> bundleDao){
+         this.libraryResourceProvider.setDao(bundleDao);
+    }
+    public IFhirResourceDao<Library> gettDao(){
+        return this.libraryResourceProvider.getDao();
+   }
     
     private Iterable<org.hl7.fhir.r4.model.Library> resolveLibraries(List< IBaseResource > resourceList) {
         List<org.hl7.fhir.r4.model.Library> ret = new ArrayList<>();

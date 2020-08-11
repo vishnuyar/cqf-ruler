@@ -2,9 +2,18 @@ package org.opencds.cqf.common.providers;
 
 import java.util.function.Function;
 
+import org.hl7.fhir.r4.model.Library;
+
+import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
+
 public interface LibraryResolutionProvider<LibraryType> {
     
     public LibraryType resolveLibraryById(String libraryId);
+
+    public IFhirResourceDao<Library> gettDao();
+   
+
+    public void setDao(IFhirResourceDao<Library> bundleDao);
 
     public LibraryType resolveLibraryByName(String libraryName, String libraryVersion);
 

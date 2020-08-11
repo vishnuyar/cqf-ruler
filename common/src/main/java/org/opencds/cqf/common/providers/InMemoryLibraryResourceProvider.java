@@ -5,6 +5,11 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.hl7.fhir.r4.model.Library;
+
+import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
+
 import java.util.Collection;
 
 public class InMemoryLibraryResourceProvider<LibraryType> implements LibraryResolutionProvider<LibraryType> {
@@ -14,9 +19,12 @@ public class InMemoryLibraryResourceProvider<LibraryType> implements LibraryReso
     private Function<LibraryType, String> getName;
     private Function<LibraryType, String> getVersion;
 
-    public InMemoryLibraryResourceProvider() {};
+    public InMemoryLibraryResourceProvider() {
+    };
 
-    public InMemoryLibraryResourceProvider(Collection<LibraryType> initialLibraries, Function<LibraryType, String> getId, Function<LibraryType, String> getName, Function<LibraryType, String> getVersion) {
+    public InMemoryLibraryResourceProvider(Collection<LibraryType> initialLibraries,
+            Function<LibraryType, String> getId, Function<LibraryType, String> getName,
+            Function<LibraryType, String> getVersion) {
 
         this.getId = getId;
         this.getName = getName;
@@ -29,7 +37,7 @@ public class InMemoryLibraryResourceProvider<LibraryType> implements LibraryReso
 
     @Override
     public LibraryType resolveLibraryById(String libraryId) {
-        if (this.libraries.containsKey(libraryId)){
+        if (this.libraries.containsKey(libraryId)) {
             return this.libraries.get(libraryId);
         }
 
@@ -38,7 +46,8 @@ public class InMemoryLibraryResourceProvider<LibraryType> implements LibraryReso
 
     @Override
     public LibraryType resolveLibraryByName(String libraryName, String libraryVersion) {
-        List<LibraryType> libraries = this.libraries.values().stream().filter(x -> this.getName.apply(x).equals(libraryName)).collect(Collectors.toList());
+        List<LibraryType> libraries = this.libraries.values().stream()
+                .filter(x -> this.getName.apply(x).equals(libraryName)).collect(Collectors.toList());
         LibraryType library = LibraryResolutionProvider.selectFromList(libraries, libraryVersion, this.getVersion);
 
         if (library == null) {
@@ -51,6 +60,18 @@ public class InMemoryLibraryResourceProvider<LibraryType> implements LibraryReso
     @Override
     public void update(LibraryType library) {
         this.libraries.put(this.getId.apply(library), library);
-	}
+    }
+
+    @Override
+    public void setDao(IFhirResourceDao<Library> bundleDao) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public IFhirResourceDao<Library> gettDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
 }

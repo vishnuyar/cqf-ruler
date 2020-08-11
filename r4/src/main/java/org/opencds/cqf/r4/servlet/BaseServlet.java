@@ -230,7 +230,7 @@ public class BaseServlet extends RestfulServer {
 
         // Measure processing
         MeasureOperationsProvider measureProvider = new MeasureOperationsProvider(this.registry, providerFactory, narrativeProvider, hqmfProvider, 
-            libraryProvider, (MeasureResourceProvider)this.getResourceProvider(Measure.class));
+        (LibraryResourceProvider)this.getResourceProvider(Library.class), (MeasureResourceProvider)this.getResourceProvider(Measure.class));
         this.registerProvider(measureProvider);
         
         IFhirResourceDao<Patient> patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);

@@ -349,7 +349,9 @@ public class MeasureOperationsProvider {
         LibraryResourceProvider rp = new LibraryResourceProvider();
         rp.setDao(defaultLibraryResourceProvider.getDao());
         
-        
+        if(libBundle != null){
+            rp.setDao(new LibraryBundleDao(libBundle));
+        }
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(new LibraryOperationsProvider
         		(rp, this.narrativeProvider));
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
