@@ -25,8 +25,7 @@ import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import lombok.Data;
 
 @Data
-public class MeasureEvaluationSeed
-{
+public class MeasureEvaluationSeed {
     private Measure measure;
     private Context context;
     private Interval measurementPeriod;
@@ -35,107 +34,96 @@ public class MeasureEvaluationSeed
     private EvaluationProviderFactory providerFactory;
     private DataProvider dataProvider;
     private static final Logger logger = LoggerFactory.getLogger(MeasureEvaluationSeed.class);
-    public static HashMap<String,Library> libraryMap = new HashMap<>();
+    public static HashMap<String, Library> libraryMap = new HashMap<>();
     private Library library = null;
 
-    public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
-    {
+    public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader,
+            LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider) {
         this.providerFactory = providerFactory;
         this.libraryLoader = libraryLoader;
         this.libraryResourceProvider = libraryResourceProvider;
     }
 
-    public void setup(
-            Measure measure, String periodStart, String periodEnd,
-            String productLine, String source, String user, String pass)
-    {
+    public void setup(Measure measure, String periodStart, String periodEnd, String productLine, String source,
+            String user, String pass) {
         this.measure = measure;
-        
-        if (!libraryMap.containsKey(measure.getId())){
+
+        if (!libraryMap.containsKey(measure.getId())) {
             LibraryHelper.loadLibraries(measure, this.libraryLoader, this.libraryResourceProvider);
 
             // resolve primary library
-            
+
             this.library = LibraryHelper.resolvePrimaryLibrary(measure, libraryLoader, this.libraryResourceProvider);
-            libraryMap.put(measure.getId(),this.library);
-        }else{
+            libraryMap.put(measure.getId(), this.library);
+        } else {
             this.library = libraryMap.get(measure.getId());
         }
-        setupLibrary(
-             library,  periodStart,  periodEnd,
-             productLine,  source,  user,  pass);
+        setupLibrary(library, periodStart, periodEnd, productLine, source, user, pass);
     }
 
-
-    public void setupLibrary(
-            String libraryName, String periodStart, String periodEnd,
-            String productLine, String source, String user, String pass)
-    {
-             this.library = LibraryHelper.resolveLibraryById(libraryName, libraryLoader, libraryResourceProvider);
-            setupLibrary(
-             this.library,  periodStart,  periodEnd,
-             productLine,  source,  user,  pass);
+    public void setupLibrary(String libraryName, String periodStart, String periodEnd, String productLine,
+            String source, String user, String pass) {
+        this.library = LibraryHelper.resolveLibraryById(libraryName, libraryLoader, libraryResourceProvider);
+        setupLibrary(this.library, periodStart, periodEnd, productLine, source, user, pass);
     }
 
-    public Library getLibrary(){
+    public Library getLibrary() {
         return this.library;
     }
 
-    public void setupLibrary(
-            Library library, String periodStart, String periodEnd,
-            String productLine, String source, String user, String pass)
-    {
-        
-       
+    public void setupLibrary(Library library, String periodStart, String periodEnd, String productLine, String source,
+            String user, String pass) {
 
         // resolve execution context
         this.library = library;
         context = new Context(library);
-        
+
         context.registerLibraryLoader(libraryLoader);
 
-        List<Triple<String,String,String>> usingDefs = UsingHelper.getUsingUrlAndVersion(library.getUsings());
+        List<Triple<String, String, String>> usingDefs = UsingHelper.getUsingUrlAndVersion(library.getUsings());
 
         if (usingDefs.size() > 1) {
-            throw new IllegalArgumentException("Evaluation of Measure using multiple Models is not supported at this time.");
+            throw new IllegalArgumentException(
+                    "Evaluation of Measure using multiple Models is not supported at this time.");
         }
 
         // If there are no Usings, there is probably not any place the Terminology
-        // actually used so I think the assumption that at least one provider exists is ok.
+        // actually used so I think the assumption that at least one provider exists is
+        // ok.
         TerminologyProvider terminologyProvider = null;
         if (usingDefs.size() > 0) {
-            // Creates a terminology provider based on the first using statement. This assumes the terminology
+            // Creates a terminology provider based on the first using statement. This
+            // assumes the terminology
             // server matches the FHIR version of the CQL.
-            terminologyProvider = this.providerFactory.createTerminologyProvider(
-                    usingDefs.get(0).getLeft(), usingDefs.get(0).getMiddle(),
-                        source, user, pass);
+            terminologyProvider = this.providerFactory.createTerminologyProvider(usingDefs.get(0).getLeft(),
+                    usingDefs.get(0).getMiddle(), source, user, pass);
             context.registerTerminologyProvider(terminologyProvider);
         }
-        
-        for (Triple<String,String,String> def : usingDefs)
-        {
+
+        for (Triple<String, String, String> def : usingDefs) {
             // logger.info("get dataprovider");
-            this.dataProvider = this.providerFactory.createDataProvider(def.getLeft(), def.getMiddle(), terminologyProvider);
-            //logger.info("set context dataprovider");
-            context.registerDataProvider(
-                def.getRight(), 
-                dataProvider);
+            this.dataProvider = this.providerFactory.createDataProvider(def.getLeft(), def.getMiddle(),
+                    terminologyProvider);
+            // logger.info("set context dataprovider");
+            context.registerDataProvider(def.getRight(), dataProvider);
         }
 
-
         // resolve the measurement period
-        //logger.info("set interval");
-        measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
-                DateHelper.resolveRequestDate(periodEnd, false), true);
-        //logger.info("set measurement period");
-        context.setParameter(null, "Measurement Period",
-                new Interval(DateTime.fromJavaDate((Date) measurementPeriod.getStart()), true,
-                        DateTime.fromJavaDate((Date) measurementPeriod.getEnd()), true));
-
+        // logger.info("set interval");
+        // If period start is null don't set the parameter "Measurement
+        // period"
+        if (periodStart != null) {
+            measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
+                    DateHelper.resolveRequestDate(periodEnd, false), true);
+            // logger.info("set measurement period");
+            context.setParameter(null, "Measurement Period",
+                    new Interval(DateTime.fromJavaDate((Date) measurementPeriod.getStart()), true,
+                            DateTime.fromJavaDate((Date) measurementPeriod.getEnd()), true));
+        }
         if (productLine != null) {
             context.setParameter(null, "Product Line", productLine);
         }
-        //logger.info("seed setup complete");
+        // logger.info("seed setup complete");
         context.setExpressionCaching(true);
     }
 }

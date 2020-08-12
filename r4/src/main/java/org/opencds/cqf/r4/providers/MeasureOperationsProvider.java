@@ -285,8 +285,8 @@ public class MeasureOperationsProvider {
     @Operation(name = "$lib-evaluate", idempotent = true, type = Measure.class)
     public Parameters libraryEvaluate(@OperationParam(name = "libraryId") String libraryId,
             @OperationParam(name = "criteria") String criteria, @OperationParam(name = "subject") String patientRef,
-            @OperationParam(name = "periodStart") String periodStart,
-            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "source") String source,
+            
+             @OperationParam(name = "source") String source,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "criteriaList") String criteriaList,
@@ -352,17 +352,16 @@ public class MeasureOperationsProvider {
         if(libBundle != null){
             rp.setDao(new LibraryBundleDao(libBundle));
         }
-        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(new LibraryOperationsProvider
-        		(rp, this.narrativeProvider));
-        MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
-                    this.libraryResolutionProvider);
-        MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
-                    seed.getMeasurementPeriod());
+        LibraryOperationsProvider libOpsProvider = new LibraryOperationsProvider(rp, this.narrativeProvider);
+        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(libOpsProvider);
+        MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,libOpsProvider);
+        MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), 
+                                            this.registry,seed.getMeasurementPeriod());
         Context context = null;
         Library library = null;
         
         
-        seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
+        seed.setupLibrary(libraryId, null, null, null, source, user, pass);
         context = seed.getContext();
         library = seed.getLibrary();
         if (parameters != null) {

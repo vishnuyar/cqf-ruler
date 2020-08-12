@@ -43,14 +43,14 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.SimpleBundleProvider;
 
-
 public class LibraryBundleDao implements IFhirResourceDao<Library> {
 
     private Bundle libBundle;
-    public LibraryBundleDao(Bundle libBundle){
+
+    public LibraryBundleDao(Bundle libBundle) {
         this.libBundle = libBundle;
     }
-    
+
     @Override
     public FhirContext getContext() {
         // TODO Auto-generated method stub
@@ -236,21 +236,20 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     }
 
     @Override
-    public Library read(IIdType theId) { 
+    public Library read(IIdType theId) {
         System.out.println("Getting library id from bundle");
         for (Bundle.BundleEntryComponent entry : this.libBundle.getEntry()) {
             if (entry.getResource().getResourceType().toString().equals("Library")) {
                 try {
-                    System.out.println("id value:" +theId.getValue());
+                    System.out.println("id value:" + theId.getValue());
                     Library library = (Library) entry.getResource();
                     String libraryId = library.getId();
-                    System.out.println("element"+library.getIdElement().getValue());
-                    String libaryIid = libraryId.split("/")[1];
-                    System.out.println("Resource found is: "+library.getId());
-                    System.out.println("Resource looking for: "+theId.getValueAsString());
-                    if (theId.equals(library.getIdElement())){
-                        System.out.println("Library found");
-                        return library;
+                    if (libraryId != null) {
+                        String idPart = library.getIdElement().getIdPart();
+                        if (theId.getValue().equals(idPart)) {
+                            System.out.println("Library found");
+                            return library;
+                        }
                     }
 
                 } catch (Exception e) {
@@ -318,26 +317,27 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
 
     @Override
     public IBundleProvider search(SearchParameterMap theParams) {
-        // TODO Auto-generated method 
+        // TODO Auto-generated method
         List<IBaseResource> resources = new ArrayList<>();
         for (List<List<IQueryParameterType>> nextAnds : theParams.values()) {
             for (List<? extends IQueryParameterType> nextOrs : nextAnds) {
                 for (IQueryParameterType next : nextOrs) {
                     String searchPara = next.getValueAsQueryToken(FhirContext.forR4());
-                    System.out.println("next:: "+searchPara);
+                    System.out.println("next:: " + searchPara);
                     for (Bundle.BundleEntryComponent entry : this.libBundle.getEntry()) {
                         if (entry.getResource().getResourceType().toString().equals("Library")) {
                             Library library = (Library) entry.getResource();
                             String libName = library.getName();
-                            System.out.println("lib name: "+libName);
-                            if(searchPara.equals(libName)){
+                            System.out.println("lib name: " + libName);
+                            if (searchPara.equals(libName)) {
                                 System.out.println("Library found");
                                 resources.add(library);
                             }
                         }
                     }
                     if (next.getMissing() != null) {
-                        throw new ca.uhn.fhir.rest.server.exceptions.MethodNotAllowedException(":missing modifier is disabled on this server");
+                        throw new ca.uhn.fhir.rest.server.exceptions.MethodNotAllowedException(
+                                ":missing modifier is disabled on this server");
                     }
                 }
             }
@@ -345,7 +345,7 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         UUID uuid = UUID.randomUUID();
         System.out.println("Search 10");
         SimpleBundleProvider sb = new SimpleBundleProvider(resources);
-        
+
         return sb;
     }
 
@@ -427,5 +427,5 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         // TODO Auto-generated method stub
         return null;
     }
-    
+
 }
