@@ -21,6 +21,7 @@ import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.common.helpers.UsingHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 
 import lombok.Data;
 
@@ -36,6 +37,11 @@ public class MeasureEvaluationSeed {
     private static final Logger logger = LoggerFactory.getLogger(MeasureEvaluationSeed.class);
     public static HashMap<String, Library> libraryMap = new HashMap<>();
     private Library library = null;
+    public static final String LOCAL_RETRIEVER = "local";
+    public static final String REMOTE_RETRIEVER = "remoteFhir";
+    public static final String INMEMORY_RETRIEVER = "inMemory";
+    private String retrieverType = LOCAL_RETRIEVER;
+    
 
     public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader,
             LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider) {
@@ -102,8 +108,9 @@ public class MeasureEvaluationSeed {
 
         for (Triple<String, String, String> def : usingDefs) {
             // logger.info("get dataprovider");
+            
             this.dataProvider = this.providerFactory.createDataProvider(def.getLeft(), def.getMiddle(),
-                    terminologyProvider);
+                    terminologyProvider,this.retrieverType);
             // logger.info("set context dataprovider");
             context.registerDataProvider(def.getRight(), dataProvider);
         }
@@ -112,7 +119,7 @@ public class MeasureEvaluationSeed {
         // logger.info("set interval");
         // If period start is null don't set the parameter "Measurement
         // period"
-        if (periodStart != null) {
+        if ((periodStart != null) && (periodEnd != null)) {
             measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
                     DateHelper.resolveRequestDate(periodEnd, false), true);
             // logger.info("set measurement period");
@@ -125,5 +132,13 @@ public class MeasureEvaluationSeed {
         }
         // logger.info("seed setup complete");
         context.setExpressionCaching(true);
+    }
+
+    public String getRetrieverType() {
+        return retrieverType;
+    }
+
+    public void setRetrieverType(String retrieverType) {
+        this.retrieverType = retrieverType;
     }
 }

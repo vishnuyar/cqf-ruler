@@ -11,6 +11,9 @@ public interface EvaluationProviderFactory {
     public DataProvider createDataProvider(String model, String version, String url, String user, String pass);
 
     public DataProvider createDataProvider(String model, String version, TerminologyProvider terminologyProvider);
+    
+    public DataProvider createDataProvider(String model, String version, TerminologyProvider terminologyProvider, String retrieveType);
+
 
     public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user, String pass);
 }

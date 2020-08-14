@@ -237,17 +237,14 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
 
     @Override
     public Library read(IIdType theId) {
-        System.out.println("Getting library id from bundle");
         for (Bundle.BundleEntryComponent entry : this.libBundle.getEntry()) {
             if (entry.getResource().getResourceType().toString().equals("Library")) {
                 try {
-                    System.out.println("id value:" + theId.getValue());
                     Library library = (Library) entry.getResource();
                     String libraryId = library.getId();
                     if (libraryId != null) {
                         String idPart = library.getIdElement().getIdPart();
                         if (theId.getValue().equals(idPart)) {
-                            System.out.println("Library found");
                             return library;
                         }
                     }
@@ -323,14 +320,11 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
             for (List<? extends IQueryParameterType> nextOrs : nextAnds) {
                 for (IQueryParameterType next : nextOrs) {
                     String searchPara = next.getValueAsQueryToken(FhirContext.forR4());
-                    System.out.println("next:: " + searchPara);
                     for (Bundle.BundleEntryComponent entry : this.libBundle.getEntry()) {
                         if (entry.getResource().getResourceType().toString().equals("Library")) {
                             Library library = (Library) entry.getResource();
                             String libName = library.getName();
-                            System.out.println("lib name: " + libName);
                             if (searchPara.equals(libName)) {
-                                System.out.println("Library found");
                                 resources.add(library);
                             }
                         }
@@ -342,8 +336,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
                 }
             }
         }
-        UUID uuid = UUID.randomUUID();
-        System.out.println("Search 10");
         SimpleBundleProvider sb = new SimpleBundleProvider(resources);
 
         return sb;

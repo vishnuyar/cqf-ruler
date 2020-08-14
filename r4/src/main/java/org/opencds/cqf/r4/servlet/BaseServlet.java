@@ -25,6 +25,7 @@ import org.hl7.fhir.r4.model.ValueSet;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
+import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
 import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
 import org.opencds.cqf.library.r4.NarrativeProvider;
 import org.opencds.cqf.measure.r4.CodeTerminologyRef;
@@ -287,7 +288,7 @@ public class BaseServlet extends RestfulServer {
             System.out.println("patient_server_token:"+theReq.getHeader("patient_server_token"));
 			nonLocal.put("patient_server_token", theReq.getHeader("patient_server_token"));
         }
-        JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
+        RemoteRetrieveProvider.patient_fhir.set(nonLocal);
 		super.service(theReq, theResp);
 	}
     

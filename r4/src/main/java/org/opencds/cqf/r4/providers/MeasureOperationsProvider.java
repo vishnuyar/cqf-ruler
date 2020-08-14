@@ -47,7 +47,9 @@ import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import org.opencds.cqf.common.retrieve.InMemoryRetrieveProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
+import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
 import org.opencds.cqf.cql.execution.Context;
 import org.opencds.cqf.cql.execution.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
@@ -285,8 +287,9 @@ public class MeasureOperationsProvider {
     @Operation(name = "$lib-evaluate", idempotent = true, type = Measure.class)
     public Parameters libraryEvaluate(@OperationParam(name = "libraryId") String libraryId,
             @OperationParam(name = "criteria") String criteria, @OperationParam(name = "subject") String patientRef,
-            
-             @OperationParam(name = "source") String source,
+            @OperationParam(name = "periodStart") String periodStart,
+            @OperationParam(name = "periodEnd") String periodEnd,
+            @OperationParam(name = "source") String source,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "criteriaList") String criteriaList,
@@ -301,7 +304,7 @@ public class MeasureOperationsProvider {
         logger.info("library id: " + libraryId);
         logger.info("criteria:" + criteria);
         logger.info("criteriaList:" + criteriaList);
-        
+        String retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
         // logger.info("periodStart:" + periodStart);
         // logger.info("patientRef:" + patientRef);
         // logger.info("patientServerUrl:" + patientServerUrl);
@@ -327,6 +330,7 @@ public class MeasureOperationsProvider {
             if (patientServerUrl != "") {
                 nonLocal.put("patient_server_url", patientServerUrl);
                 local = false;
+                retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
             }
 
         }
@@ -337,13 +341,13 @@ public class MeasureOperationsProvider {
 
 		}
 		if (dataBundle != null) {
-			local = false;
-			// System.out.println("Received prefetch bundle");
-                nonLocal.put("dataBundle", dataBundle);
+            retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
+            nonLocal.put("dataBundle", dataBundle);
+            InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
 
         }
         if (!local) {
-            JpaFhirRetrieveProvider.patient_fhir.set(nonLocal);
+            RemoteRetrieveProvider.patient_fhir.set(nonLocal);
         }
         
         LibraryResourceProvider rp = new LibraryResourceProvider();
@@ -351,23 +355,22 @@ public class MeasureOperationsProvider {
         
         if(libBundle != null){
             rp.setDao(new LibraryBundleDao(libBundle));
+            
         }
         LibraryOperationsProvider libOpsProvider = new LibraryOperationsProvider(rp, this.narrativeProvider);
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(libOpsProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,libOpsProvider);
+        seed.setRetrieverType(retrieverType);
+        seed.setupLibrary(libraryId, periodStart, periodEnd,null,source, user, pass);
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), 
                                             this.registry,seed.getMeasurementPeriod());
         Context context = null;
         Library library = null;
-        
-        
-        seed.setupLibrary(libraryId, null, null, null, source, user, pass);
+
         context = seed.getContext();
         library = seed.getLibrary();
         if (parameters != null) {
             for (Parameters.ParametersParameterComponent pc : parameters.getParameter()) {
-                // System.out.println("PC name: " + pc.getName());
-                // System.out.println("PC resource: " + pc.getResource());
                 context.setParameter(null, pc.getName(), pc.getResource());
             }
         }

@@ -3,12 +3,15 @@ package org.opencds.cqf.r4.evaluation;
 import org.opencds.cqf.cql.data.CompositeDataProvider;
 import org.opencds.cqf.cql.data.DataProvider;
 import org.opencds.cqf.cql.model.R4FhirModelResolver;
+import org.opencds.cqf.cql.retrieve.SearchParamFhirRetrieveProvider;
 import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
 import org.opencds.cqf.cql.terminology.fhir.R4FhirTerminologyProvider;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.R4ApelonFhirTerminologyProvider;
+import org.opencds.cqf.common.retrieve.InMemoryRetrieveProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
+import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
@@ -39,9 +42,26 @@ public class ProviderFactory implements EvaluationProviderFactory {
     }
 
     public DataProvider createDataProvider(String model, String version, TerminologyProvider terminologyProvider) {
+
+        return this.createDataProvider(model, version, terminologyProvider, MeasureEvaluationSeed.LOCAL_RETRIEVER);
+    }
+
+    public DataProvider createDataProvider(String model, String version, TerminologyProvider terminologyProvider,
+            String retrieveType) {
         if (model.equals("FHIR") && version.equals("4.0.0")) {
             R4FhirModelResolver modelResolver = new R4FhirModelResolver();
-            JpaFhirRetrieveProvider retrieveProvider = new JpaFhirRetrieveProvider(this.registry, new SearchParameterResolver(this.fhirContext));
+            SearchParamFhirRetrieveProvider retrieveProvider = new JpaFhirRetrieveProvider(this.registry,
+                    new SearchParameterResolver(this.fhirContext));
+            if (retrieveType.equals(MeasureEvaluationSeed.INMEMORY_RETRIEVER)) {
+                retrieveProvider = new InMemoryRetrieveProvider(this.registry,
+                        new SearchParameterResolver(this.fhirContext));
+
+            } else if (retrieveType.equals(MeasureEvaluationSeed.REMOTE_RETRIEVER)) {
+                retrieveProvider = new RemoteRetrieveProvider(this.registry,
+                        new SearchParameterResolver(this.fhirContext));
+
+            }
+
             retrieveProvider.setTerminologyProvider(terminologyProvider);
             retrieveProvider.setExpandValueSets(true);
 
@@ -52,12 +72,12 @@ public class ProviderFactory implements EvaluationProviderFactory {
                 String.format("Can't construct a data provider for model %s version %s", model, version));
     }
 
-    public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user, String pass) {
+    public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user,
+            String pass) {
         if (url != null && url.contains("apelon.com")) {
-            return new R4ApelonFhirTerminologyProvider(this.fhirContext)
-            .withBasicAuth(user, pass).setEndpoint(url, false);
-        }
-        else if (url != null && !url.isEmpty()) {
+            return new R4ApelonFhirTerminologyProvider(this.fhirContext).withBasicAuth(user, pass).setEndpoint(url,
+                    false);
+        } else if (url != null && !url.isEmpty()) {
             return new R4FhirTerminologyProvider(this.fhirContext).withBasicAuth(user, pass).setEndpoint(url, false);
         } else
             return this.defaultTerminologyProvider;
