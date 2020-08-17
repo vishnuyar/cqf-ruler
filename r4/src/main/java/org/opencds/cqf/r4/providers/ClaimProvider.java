@@ -1,9 +1,7 @@
 package org.opencds.cqf.r4.providers;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -13,59 +11,37 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
-import org.hl7.fhir.ClaimResponseItem;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
-import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.ClaimResponse;
 import org.hl7.fhir.r4.model.ClaimResponse.ErrorComponent;
-import org.hl7.fhir.r4.model.ClaimResponse.Use;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Endpoint;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.opencds.cqf.common.config.HapiProperties;
+import org.springframework.context.ApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoMethodOutcome;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.rp.r4.ClaimResourceProvider;
-import ca.uhn.fhir.jpa.rp.r4.PatientResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.parser.IParser;
-import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
-import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.annotation.OptionalParam;
-import ca.uhn.fhir.rest.annotation.RequiredParam;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.TokenParam;
-
-import org.springframework.context.ApplicationContext;
-
-import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Parameters;
-import org.json.JSONObject;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-import org.opencds.cqf.common.config.HapiProperties;
 
 public class ClaimProvider extends ClaimResourceProvider {
 
@@ -104,15 +80,15 @@ public class ClaimProvider extends ClaimResourceProvider {
 		return saltStr;
 	}
 
-
-	private String postHttpRequest(String Url, byte[] requestData, String apiKey){
-		String httpResponse = "";
-		try{
-			System.out.println("Posting to: "+Url);
+	private JSONObject postHttpRequest(String Url, byte[] requestData, String apiKey) {
+		JSONObject httpResponse = new JSONObject();
+		BufferedReader in;
+		try {
+			System.out.println("Posting to: " + Url);
 			StringBuilder sb = new StringBuilder();
 			URL url = new URL(Url);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			if (apiKey !=null){
+			if (apiKey != null) {
 				conn.setRequestProperty("x-api-key", apiKey);
 			}
 			conn.setRequestMethod("POST");
@@ -120,53 +96,63 @@ public class ClaimProvider extends ClaimResourceProvider {
 			conn.setRequestProperty("Accept", "text/plain");
 			conn.setDoOutput(true);
 			conn.getOutputStream().write(requestData);
-			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+			if (conn.getResponseCode() < HttpURLConnection.HTTP_BAD_REQUEST) {
+				in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+			} else {
+				in = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"));
+
+			}
 			String line = null;
 			while ((line = in.readLine()) != null) {
 				sb.append(line);
 			}
-			httpResponse = sb.toString();
+			httpResponse.put("statusCode", conn.getResponseCode());
+			httpResponse.put("body", sb.toString());
 			conn.disconnect();
-
+			System.out.println("StatusCode" + conn.getResponseCode());
+			System.out.println("body" + sb.toString());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		
+
 		return httpResponse;
 	}
 
-	private String submitX12(String x12_generated, ClaimResponse claimResponse, String strUrl) {
-		String str_result = "";
-		try{
+	private JSONObject submitX12(String x12_generated, List<ErrorComponent> errorList, String strUrl) {
+		JSONObject result = new JSONObject();
+		try {
 			byte[] postDataBytes = x12_generated.getBytes("UTF-8");
-			str_result = postHttpRequest(strUrl,postDataBytes,null);
+			result = postHttpRequest(strUrl, postDataBytes, null);
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		
-		System.out.println("\n  X12 Submission reponse :\n" + str_result);
-		return str_result;
+		return result;
 	}
 
-	private String generateX12(String jsonStr) {
-		String x12_generated = "";
+	private JSONObject generateX12(String jsonStr, List<ErrorComponent> errorList, String strUrl, String apiKey) {
+		JSONObject x12_generated = new JSONObject();
 		try {
 			// set envelpe to true to enclose generated x12 in soap envelope
 			JSONObject x12request = new JSONObject();
 			x12request.put("claim_json", jsonStr);
-			x12request.put("envelope","true");
+			x12request.put("envelope", "true");
 			String x12Str = x12request.toString();
-			String strUrl = HapiProperties.getProperty("x12_generator_url");
-			String apiKey = HapiProperties.getProperty("x12_generator_key");
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
-			x12_generated = postHttpRequest(strUrl,postDataBytes,apiKey);
-			if (x12_generated.length() >1){
-				if (x12_generated.contains("errors")) {
-					JSONObject response = new JSONObject(x12_generated);
-					this.errors = response.getJSONArray("errors");
+			x12_generated = postHttpRequest(strUrl, postDataBytes, apiKey);
+			if (x12_generated.has("statusCode")) {
+				if ((int) x12_generated.get("statusCode") >= HttpURLConnection.HTTP_BAD_REQUEST) {
+					JSONObject response = new JSONObject(x12_generated.get("body"));
+					JSONArray errors = response.getJSONArray("errors");
+					for (int i = 0; i < errors.length(); i++) {
+						JSONObject errorObj = new JSONObject(errors.get(i).toString());
+						System.out.println("errorObj: " + errorObj);
+						String code = errorObj.getString("code");
+						String message = errorObj.getString("message");
+						errorList.add(generateErrorComponent(code, message));
+					}
 				}
-				System.out.println("Errors:" + errors);
 			}
 			// System.out.println("\n x12_generated :" + x12_generated);
 		} catch (Exception ex) {
@@ -175,23 +161,32 @@ public class ClaimProvider extends ClaimResourceProvider {
 		return x12_generated;
 	}
 
-	private ClaimResponse readX12Response(String x12Str) {
-		ClaimResponse response = null;
+	private ClaimResponse readX12Response(String x12Str, List<ErrorComponent> errorList, String strUrl, String apiKey) {
+		ClaimResponse response = new ClaimResponse();
 		try {
-
-			StringBuilder sb = new StringBuilder();
-			String url = HapiProperties.getProperty("x12_reader_url");
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
-			String apiKey = HapiProperties.getProperty("x12_reader_key");
-			String httpResponse = postHttpRequest(url,postDataBytes,apiKey);
-			System.out.println("\n x12response :" + httpResponse);
-			if (httpResponse.length() > 1){
-				IParser parser = FhirContext.forR4().newJsonParser();
-				response = parser.parseResource(ClaimResponse.class, httpResponse);
+			JSONObject httpResponse = postHttpRequest(strUrl, postDataBytes, apiKey);
+			if (httpResponse.has("statusCode")) {
+				if ((int) httpResponse.get("statusCode") < HttpURLConnection.HTTP_BAD_REQUEST) {
+					IParser parser = FhirContext.forR4().newJsonParser();
+					response = parser.parseResource(ClaimResponse.class, httpResponse.getString("body"));
+					return response;
+				} else {
+					response.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+					response.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
+					errorList.add(generateErrorComponent(String.valueOf((int) httpResponse.get("statusCode")),
+							httpResponse.getString("body")));
+					response.setError(errorList);
+
+				}
 			}
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+		response.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+		response.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
+		errorList.add(generateErrorComponent("500", "Error encountered when connecting to X12 Reader"));
+		response.setError(errorList);
 		return response;
 	}
 
@@ -224,12 +219,6 @@ public class ClaimProvider extends ClaimResourceProvider {
 
 			retVal.setCreated(new Date());
 			retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
-			// Need to add items from Claim to ClaimReponse
-			// if(claim.getItem().size()>0){
-
-			// retVal.setItem((List<ClaimResponse.ItemComponent>)claim.getItem());
-			// }
-
 			Identifier claimResIdentifier = new Identifier();
 			claimResIdentifier.setSystem("http://identifiers.mettles.com");
 			String ref = getSaltString();
@@ -242,85 +231,68 @@ public class ClaimProvider extends ClaimResourceProvider {
 		return retVal;
 	}
 
-	private String getPayerURL(Bundle bundle,Claim claim) {
-		String payerURL = "";
+	private String getPayerURL(Bundle bundle, Claim claim, List<ErrorComponent> errorList, String searchURL) {
+		String payerURL = null;
 		String insurerID = claim.getInsurer().getReference().replace("Organization/", "");
-		System.out.println("INS: "+insurerID);
+		System.out.println("INS: " + insurerID);
 		System.out.println(bundle.getEntry().size());
 		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-//			System.out.println("is Insurer: "+" "+entry.getResource().getIdElement().getIdPart() +" ,"+entry.getResource().getIdElement().getIdPart().equals(insurerID));
-//			System.out.println("is Insurer: "+entry.getResource().getResourceType()+" "+entry.getResource().getResourceType().equals("Organization"));
-			if ( entry.getResource().getIdElement().getIdPart().equals(insurerID)) {
-				Organization insurer = (Organization)entry.getResource();
+			if (entry.getResource().getIdElement().getIdPart().equals(insurerID)) {
+				Organization insurer = (Organization) entry.getResource();
 				String name = insurer.getName();
 				JSONObject params = new JSONObject();
-				System.out.println("Insurer name: "+name);
+				System.out.println("Insurer name: " + name);
 				try {
-					params.put("payer_name",name );
-				} catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-				byte[] postDataBytes = null;
-				try {
+					params.put("payer_name", name);
+					byte[] postDataBytes = null;
 					postDataBytes = params.toString().getBytes("UTF-8");
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				String searchURL = "https://sm.mettles.com/cds/searchPayer";
-				String httpResponse = postHttpRequest(searchURL,postDataBytes,null);
-				JSONObject searchResObj;
-				
-				
-				if (httpResponse.length() > 1){
-					try {
-						searchResObj = new JSONObject(httpResponse);
-						if(searchResObj.has("entry")) {
-							JSONArray entries = new JSONArray(searchResObj.get("entry").toString());
-							for(int i=0; i<entries.length();i++) {
-								JSONObject resource = entries.getJSONObject(i);
-								if(resource.getString("resourceType").equals("Endpoint")){
-									Endpoint endpoint = parser.parseResource(Endpoint.class, resource.toString());
-									if (endpoint.getName().contains("X12")) {
-										return endpoint.getAddress();
-									}
-								}
+					JSONObject httpResponse = postHttpRequest(searchURL, postDataBytes, null);
+					if (httpResponse.has("statusCode")) {
+						if ((int) httpResponse.get("statusCode") < HttpURLConnection.HTTP_BAD_REQUEST) {
+							String payerEndPoint = getEndPoint(httpResponse.getString("body"));
+							if (payerEndPoint != null) {
+								return payerEndPoint;
+							} else {
+								errorList.add(generateErrorComponent("400",
+										"Payer Endpoint for X12 Submission not available"));
 							}
-						}
-					} catch (JSONException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				}
-				
-			}
-			
-		}
-		//String payerURL = "https://k8s0lhnvt2.execute-api.us-east-2.amazonaws.com/default/payer_x12";
-		// from claim get "insurer reference"
-		// from reference get resource
-		// from resource get name
-		// using name get payer from https://sm.mettles.com/cds/searchPayer
-		// from the bundle recd check for endpoint resource -- by specific
-		// if end point name has "X12"
-		// from this endpoint get address
-		return payerURL;
+						} else {
+							errorList.add(generateErrorComponent("400", httpResponse.getString("body")));
 
+						}
+					} else {
+						errorList.add(generateErrorComponent("400", "Error when connecting to Payer Search URL"));
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+		}
+		return payerURL;
 	}
 
-	private Bundle.BundleEntryComponent createTransactionEntry(Resource resource) {
-		Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(resource);
-		// if (resource.hasId()) {
-		// transactionEntry.setRequest(
-		// new
-		// Bundle.BundleEntryRequestComponent().setMethod(Bundle.HTTPVerb.PUT).setUrl(resource.getId()));
-		// } else {
-		transactionEntry.setRequest(
-				new Bundle.BundleEntryRequestComponent().setMethod(Bundle.HTTPVerb.POST).setUrl(resource.fhirType()));
-		// }
-		return transactionEntry;
+	private String getEndPoint(String object) {
+		String payerURL = null;
+		try {
+			JSONObject searchResObj = new JSONObject(object);
+			if (searchResObj.has("entry")) {
+				JSONArray entries = new JSONArray(searchResObj.get("entry").toString());
+				for (int i = 0; i < entries.length(); i++) {
+					JSONObject resource = entries.getJSONObject(i);
+					if (resource.getString("resourceType").equals("Endpoint")) {
+						Endpoint endpoint = parser.parseResource(Endpoint.class, resource.toString());
+						if (endpoint.getName().contains("X12")) {
+							payerURL = endpoint.getAddress();
+							return payerURL;
+						}
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		return payerURL;
 	}
 
 	private Patient getPatient(Patient patient) {
@@ -332,7 +304,6 @@ public class ClaimProvider extends ClaimResourceProvider {
 			param.setValue(identifier.getValue());
 			map.add("identifier", param);
 			System.out.println(" search : " + map.toNormalizedQueryString(FhirContext.forR4()));
-			List<Patient> patients = new ArrayList<>();
 			IBundleProvider patientProvider = registry.getResourceDao("Patient").search(map);
 			List<IBaseResource> patientList = patientProvider.getResources(0, patientProvider.size());
 			System.out.println("patient available:" + patientList.size());
@@ -350,7 +321,6 @@ public class ClaimProvider extends ClaimResourceProvider {
 	public Resource claimSubmit(RequestDetails details,
 			@OperationParam(name = "claim", min = 1, max = 1, type = Bundle.class) Bundle bundle)
 			throws RuntimeException {
-		this.errors = new JSONArray();
 		Patient patient = null;
 		Patient serverPatient = null;
 		Claim claim = null;
@@ -362,7 +332,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 			claimBundle.setType(bundle.getType());
 			claimBundle.setIdentifier(bundle.getIdentifier());
 			for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-				if (!entry.getResource().getResourceType().toString().equals("DocumentReference")){
+				if (!entry.getResource().getResourceType().toString().equals("DocumentReference")) {
 					claimBundle.addEntry(entry);
 				}
 				if (entry.getResource().getResourceType().toString().equals("Claim")) {
@@ -380,55 +350,50 @@ public class ClaimProvider extends ClaimResourceProvider {
 					}
 				}
 			}
-			// 
+			String payerSearchUrl = HapiProperties.getProperty("payer_search_url");
+			if (payerSearchUrl == null) {
+				throw new RuntimeException("Payer search Url not available");
+			}
+			String x12GenerateUrl = HapiProperties.getProperty("x12_generator_url");
+			if (x12GenerateUrl == null) {
+				throw new RuntimeException("X12 Generate url not available");
+			}
+			String apiKey = HapiProperties.getProperty("x12_generator_key");
+			if (apiKey == null) {
+				throw new RuntimeException("API key for X12 Generate url is not available");
+			}
+			String x12ReaderUrl = HapiProperties.getProperty("x12_reader_url");
+			if (x12ReaderUrl == null) {
+				throw new RuntimeException("X12 Reader url not available");
+			}
+			String readerApiKey = HapiProperties.getProperty("x12_reader_key");
+			if (readerApiKey == null) {
+				throw new RuntimeException("API key for X12 Reader url is not available");
+			}
+			// Generate a ClaimResponse with data from Bundle to return the response
 			ClaimResponse retVal = generateClaimResponse(patient, claim);
-			if (!HapiProperties.getProperty("x12_generator_key").equals("")) {
+			// Get the payer url to submit the generated x12
+			String x12SubmitUrl = getPayerURL(bundle, claim, errorList, payerSearchUrl);
+			System.out.println("x12SubmitUrl " + x12SubmitUrl);
+			if (x12SubmitUrl != null) {
 				IParser jsonParser = details.getFhirContext().newJsonParser();
 				String jsonStr = jsonParser.encodeResourceToString(claimBundle);
-				//System.out.println("claim without document reference"+jsonStr);
-				String x12_generated = generateX12(jsonStr);
-				if ((this.errors.length() > 0) | (x12_generated.length() < 5)) {
-					retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-					retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-
-					for (int i = 0; i < this.errors.length(); i++) {
-						JSONObject errorObj = new JSONObject(this.errors.get(i).toString());
-						System.out.println("errorObj: " + errorObj);
-						String code = errorObj.getString("code");
-						String message = errorObj.getString("message");
-						errorList.add(this.generateErrorComponent(code, message));
-
-					}
-					if (this.errors.length() == 0) {
-						errorList.add(this.generateErrorComponent("400", "Failed to Generate X12"));
-
-					}
-
-					retVal.setError(errorList);
-				} else {
-					String x12SubmitUrl;
-					// Need to implement the below function
-					x12SubmitUrl = getPayerURL(bundle,claim);
-					System.out.println("x12SubmitUrl "+x12SubmitUrl);
-					System.out.println(x12SubmitUrl);
-					
+				JSONObject x12_generated = generateX12(jsonStr, errorList, x12GenerateUrl, apiKey);
+				if (x12_generated.has("statusCode")
+						&& (int) x12_generated.get("statusCode") < HttpURLConnection.HTTP_BAD_REQUEST) {
 					// Submit the generated X12 to the payer url
-					String x12_response = submitX12(x12_generated, retVal, x12SubmitUrl);
-					// Send the response received from X12 submission for getting relevant data
-					
-					if ((x12_response != null) && (x12_response.length() > 0) ){
-						// If Error on 999 received, don't store claim response
-						if (x12_response.toLowerCase().contains("error")) {
-							retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-							retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-							errorList.add(this.generateErrorComponent("400", x12_response));
-							System.out.println(errorList.size());
-							retVal.setError(errorList);
-							System.out.println(retVal.getError().size());
+					JSONObject x12_submitResponse = submitX12((String) x12_generated.get("body"), errorList,
+							x12SubmitUrl);
+					if (x12_submitResponse.has("statusCode")) {
+						if ((int) x12_submitResponse.get("statusCode") >= HttpURLConnection.HTTP_BAD_REQUEST) {
+							errorList.add(this.generateErrorComponent(
+									String.valueOf((int) x12_submitResponse.get("statusCode")),
+									x12_submitResponse.getString("body")));
 
 						} else {
-
-							ClaimResponse recdClaimResponse = readX12Response(x12_response);
+							// Send the response received from X12 submission for getting relevant data
+							ClaimResponse recdClaimResponse = readX12Response(x12_submitResponse.getString("body"),
+									errorList, x12ReaderUrl, readerApiKey);
 							if (recdClaimResponse != null) {
 								ClaimResponse updatedResponse = updateClaimResponse(retVal, recdClaimResponse);
 								// Need to add the identifier received to this claimresponse
@@ -450,26 +415,26 @@ public class ClaimProvider extends ClaimResourceProvider {
 								claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
 								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(claimResponse));
 								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(serverPatient));
+								return responseBundle;
 
 							}
 
 						}
 
-					} else {
-						retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
-						retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
-						errorList.add(this.generateErrorComponent("400", "Error on submitting X12"));
-						System.out.println(errorList.size());
-						retVal.setError(errorList);
-						System.out.println(retVal.getError().size());
-
 					}
 
 				}
 
-			} else {
-				throw new RuntimeException("API key needs to be configured for requesting X12 server");
 			}
+			if (errorList.size() > 0) {
+				retVal.setStatus(ClaimResponse.ClaimResponseStatus.ENTEREDINERROR);
+				retVal.setOutcome(ClaimResponse.RemittanceOutcome.ERROR);
+				System.out.println("Erros size: " + errorList.size());
+				retVal.setError(errorList);
+				System.out.println(retVal.getError().size());
+
+			}
+
 			if (claimResponse == null) {
 				responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(retVal));
 
