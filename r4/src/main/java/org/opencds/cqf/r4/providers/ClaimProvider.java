@@ -110,8 +110,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 			httpResponse.put("statusCode", conn.getResponseCode());
 			httpResponse.put("body", sb.toString());
 			conn.disconnect();
-			System.out.println("StatusCode" + conn.getResponseCode());
-			System.out.println("body" + sb.toString());
+			System.out.println("StatusCode: " + conn.getResponseCode());
+			System.out.println("body: " + sb.toString());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -143,7 +143,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 			x12_generated = postHttpRequest(strUrl, postDataBytes, apiKey);
 			if (x12_generated.has("statusCode")) {
 				if ((int) x12_generated.get("statusCode") >= HttpURLConnection.HTTP_BAD_REQUEST) {
-					JSONObject response = new JSONObject(x12_generated.get("body"));
+					JSONObject response = new JSONObject(x12_generated.getString("body"));
 					JSONArray errors = response.getJSONArray("errors");
 					for (int i = 0; i < errors.length(); i++) {
 						JSONObject errorObj = new JSONObject(errors.get(i).toString());
