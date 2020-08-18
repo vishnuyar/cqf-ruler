@@ -1,5 +1,6 @@
 package org.opencds.cqf.common.evaluation;
 
+import org.hl7.fhir.r4.model.Bundle;
 import org.opencds.cqf.cql.data.DataProvider;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
 
@@ -14,6 +15,7 @@ public interface EvaluationProviderFactory {
     
     public DataProvider createDataProvider(String model, String version, TerminologyProvider terminologyProvider, String retrieveType);
 
+    public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user, String pass, Bundle valueSetsBundle);
 
     public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user, String pass);
 }

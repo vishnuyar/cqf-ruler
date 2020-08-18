@@ -8,6 +8,8 @@ import ca.uhn.fhir.jpa.term.VersionIndependentConcept;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.UriParam;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -26,10 +28,12 @@ public class JpaTerminologyProvider implements TerminologyProvider {
     private ITermReadSvcR4 terminologySvcR4;
     private FhirContext context;
     private ValueSetResourceProvider valueSetResourceProvider;
+    private Bundle valueSetsBundle;
 
     public JpaTerminologyProvider(ITermReadSvcR4 terminologySvcR4, FhirContext context, ValueSetResourceProvider valueSetResourceProvider) {
         this.terminologySvcR4 = terminologySvcR4;
         this.context = context;
+        this.valueSetsBundle = new Bundle();
         this.valueSetResourceProvider = valueSetResourceProvider;
     }
 
@@ -57,6 +61,17 @@ public class JpaTerminologyProvider implements TerminologyProvider {
             }
             IBundleProvider bundleProvider = valueSetResourceProvider.getDao().search(new SearchParameterMap().add(ValueSet.SP_URL, new UriParam(valueSet.getId())));
             List<IBaseResource> valueSets = bundleProvider.getResources(0, bundleProvider.size());
+            if (valueSets.isEmpty()) {
+                valueSets = new ArrayList<>();
+                for (Bundle.BundleEntryComponent entry : valueSetsBundle.getEntry()) {
+                    if (entry.getResource().getResourceType().toString().equals("ValueSet")){
+                        if (entry.getResource().getIdElement().getIdPart().equals(valueSet.getId())) {
+                            valueSets.add(entry.getResource());
+                        }
+
+                    }
+                }
+            }
             if (valueSets.isEmpty()) {
                 throw new IllegalArgumentException(String.format("Could not resolve value set %s.", valueSet.getId()));
             }
@@ -116,5 +131,13 @@ public class JpaTerminologyProvider implements TerminologyProvider {
                 return code.withSystem(codeSystem.getId()).withDisplay(concept.getDisplay());
         }
         return code;
+    }
+
+    public Bundle getValueSetsBundle() {
+        return valueSetsBundle;
+    }
+
+    public void setValueSetsBundle(Bundle valueSetsBundle) {
+        this.valueSetsBundle = valueSetsBundle;
     }
 }

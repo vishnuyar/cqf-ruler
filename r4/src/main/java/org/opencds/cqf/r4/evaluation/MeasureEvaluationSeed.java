@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.commons.lang3.tuple.Triple;
 import org.cqframework.cql.elm.execution.Library;
 import org.cqframework.cql.elm.execution.UsingDef;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Measure;
 import org.opencds.cqf.cql.data.DataProvider;
 import org.opencds.cqf.cql.execution.Context;
@@ -41,6 +42,7 @@ public class MeasureEvaluationSeed {
     public static final String REMOTE_RETRIEVER = "remoteFhir";
     public static final String INMEMORY_RETRIEVER = "inMemory";
     private String retrieverType = LOCAL_RETRIEVER;
+    private Bundle valueSetsBundle; 
     
 
     public MeasureEvaluationSeed(EvaluationProviderFactory providerFactory, LibraryLoader libraryLoader,
@@ -48,6 +50,7 @@ public class MeasureEvaluationSeed {
         this.providerFactory = providerFactory;
         this.libraryLoader = libraryLoader;
         this.libraryResourceProvider = libraryResourceProvider;
+        this.valueSetsBundle = new Bundle();
     }
 
     public void setup(Measure measure, String periodStart, String periodEnd, String productLine, String source,
@@ -102,7 +105,8 @@ public class MeasureEvaluationSeed {
             // assumes the terminology
             // server matches the FHIR version of the CQL.
             terminologyProvider = this.providerFactory.createTerminologyProvider(usingDefs.get(0).getLeft(),
-                    usingDefs.get(0).getMiddle(), source, user, pass);
+                    usingDefs.get(0).getMiddle(), source, user, pass,this.valueSetsBundle);
+                    
             context.registerTerminologyProvider(terminologyProvider);
         }
 
@@ -140,5 +144,13 @@ public class MeasureEvaluationSeed {
 
     public void setRetrieverType(String retrieverType) {
         this.retrieverType = retrieverType;
+    }
+
+    public Bundle getValueSetsBundle() {
+        return valueSetsBundle;
+    }
+
+    public void setValueSetsBundle(Bundle valueSetsBundle) {
+        this.valueSetsBundle = valueSetsBundle;
     }
 }

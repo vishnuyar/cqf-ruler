@@ -117,7 +117,6 @@ public class MeasureOperationsProvider {
         		(libraryResourceProvider, narrativeProvider),measureResourceProvider);
         this.defaultLibraryResourceProvider = libraryResourceProvider;
         
-
     }
 
     @Operation(name = "$hqmf", idempotent = true, type = Measure.class)
@@ -293,6 +292,7 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "criteriaList") String criteriaList,
+            @OperationParam(name = "valueSetsBundle", min = 1, max = 1, type = Bundle.class) Bundle valueSetsBundle,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OperationParam(name = "libBundle", min = 1, max = 1, type = Bundle.class) Bundle libBundle,
             @OperationParam(name = "user") String user, @OperationParam(name = "parameters") Parameters parameters,
@@ -361,6 +361,9 @@ public class MeasureOperationsProvider {
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(libOpsProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,libOpsProvider);
         seed.setRetrieverType(retrieverType);
+        if(valueSetsBundle !=null){
+            seed.setValueSetsBundle(valueSetsBundle);
+        }
         seed.setupLibrary(libraryId, periodStart, periodEnd,null,source, user, pass);
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), 
                                             this.registry,seed.getMeasurementPeriod());

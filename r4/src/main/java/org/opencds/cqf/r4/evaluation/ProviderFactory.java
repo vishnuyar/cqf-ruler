@@ -7,6 +7,8 @@ import org.opencds.cqf.cql.retrieve.SearchParamFhirRetrieveProvider;
 import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
 import org.opencds.cqf.cql.terminology.fhir.R4FhirTerminologyProvider;
+import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
+import org.hl7.fhir.r4.model.Bundle;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.R4ApelonFhirTerminologyProvider;
 import org.opencds.cqf.common.retrieve.InMemoryRetrieveProvider;
@@ -71,6 +73,17 @@ public class ProviderFactory implements EvaluationProviderFactory {
         throw new IllegalArgumentException(
                 String.format("Can't construct a data provider for model %s version %s", model, version));
     }
+
+    public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user,
+            String pass, Bundle valueSetsBundle) {
+                if (this.defaultTerminologyProvider instanceof JpaTerminologyProvider){
+                    JpaTerminologyProvider tp = (JpaTerminologyProvider)this.defaultTerminologyProvider;
+                    tp.setValueSetsBundle(valueSetsBundle);
+                    this.defaultTerminologyProvider = tp;
+                }
+                return createTerminologyProvider( model,  version,  url,  user, pass);
+
+            }
 
     public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user,
             String pass) {
