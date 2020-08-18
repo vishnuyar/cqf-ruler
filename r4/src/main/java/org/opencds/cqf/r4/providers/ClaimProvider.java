@@ -28,6 +28,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.opencds.cqf.common.config.HapiProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -44,7 +46,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.TokenParam;
 
 public class ClaimProvider extends ClaimResourceProvider {
-
+	private static final Logger logger = LoggerFactory.getLogger(ClaimProvider.class);
 	IFhirResourceDao<Bundle> bundleDao;
 	IFhirResourceDao<ClaimResponse> ClaimResponseDao;
 	IFhirResourceDao<Patient> patientDao;
@@ -84,7 +86,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 		JSONObject httpResponse = new JSONObject();
 		BufferedReader in;
 		try {
-			System.out.println("Posting to: " + Url);
+			logger.info("Posting to: " + Url);
 			StringBuilder sb = new StringBuilder();
 			URL url = new URL(Url);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -110,8 +112,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 			httpResponse.put("statusCode", conn.getResponseCode());
 			httpResponse.put("body", sb.toString());
 			conn.disconnect();
-			System.out.println("StatusCode: " + conn.getResponseCode());
-			System.out.println("body: " + sb.toString());
+			logger.info("StatusCode: " + conn.getResponseCode());
+			logger.info("body: " + sb.toString());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
