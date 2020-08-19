@@ -30,7 +30,7 @@ import ca.uhn.fhir.util.BundleUtil;
 import ca.uhn.fhir.util.bundle.BundleEntryParts;
 
 public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
-    org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("inmemrorysearch");
+    org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("inmemorysearch");
     DaoRegistry registry;
     private FhirContext myFhirContext = FhirContext.forR4();
     public static ThreadLocal<HashMap> patient_fhir;

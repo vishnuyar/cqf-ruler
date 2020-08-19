@@ -92,6 +92,10 @@ public class MeasureOperationsProvider {
     private DaoRegistry registry;
     private EvaluationProviderFactory factory;
     private LibraryResourceProvider defaultLibraryResourceProvider;
+    private HashMap<String, Object> nonLocal;
+    private Boolean local;
+    private String retrieverType;
+        
     
 
     private static final Logger logger = LoggerFactory.getLogger(MeasureOperationsProvider.class);
@@ -108,6 +112,9 @@ public class MeasureOperationsProvider {
         this.hqmfProvider = hqmfProvider;
         this.dataRequirementsProvider = new DataRequirementsProvider();
         this.measureResourceProvider = measureResourceProvider;
+        this.nonLocal = new HashMap<>();
+        this.local = true;
+        this.retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
     }
     public MeasureOperationsProvider(DaoRegistry registry, EvaluationProviderFactory factory,
             NarrativeProvider narrativeProvider, HQMFProvider hqmfProvider,
@@ -198,6 +205,9 @@ public class MeasureOperationsProvider {
             @OptionalParam(name = "productLine") String productLine,
             @OptionalParam(name = "practitioner") String practitionerRef,
             @OptionalParam(name = "lastReceivedOn") String lastReceivedOn,
+            @OptionalParam(name = "patientServerUrl") String patientServerUrl,
+            @OptionalParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OptionalParam(name = "source") String source, @OptionalParam(name = "user") String user,
             @OptionalParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
 
@@ -208,15 +218,37 @@ public class MeasureOperationsProvider {
                 this.libraryResolutionProvider);
         // logger.info("get measure dao");
         Measure measure = this.measureResourceProvider.getDao().read(theId);
-        // logger.info("measure dao available");
+        logger.info("patientserverurl: "+patientServerUrl);
         if (measure == null) {
             throw new RuntimeException("Could not find Measure/" + theId.getIdPart());
         }
+        if (patientServerUrl != null) {
+            if (patientServerUrl != "") {
+                nonLocal.put("patient_server_url", patientServerUrl);
+                this.local = false;
+                this.retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
+            }
 
+        }
+        if (patientServerToken != null) {
+            if (patientServerToken != "") {
+                this.nonLocal.put("patient_server_token", patientServerToken);
+            }
+
+		}
+		if (dataBundle != null) {
+            this.retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
+            this.nonLocal.put("dataBundle", dataBundle);
+            InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
+
+        }
+        if (!local) {
+            RemoteRetrieveProvider.patient_fhir.set(this.nonLocal);
+        }
+        seed.setRetrieverType(this.retrieverType);
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
 
-        // resolve report type
-        // logger.info("create evaluator");
+        
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                 seed.getMeasurementPeriod());
         // logger.info("evaluator ready");
@@ -304,13 +336,8 @@ public class MeasureOperationsProvider {
         logger.info("library id: " + libraryId);
         logger.info("criteria:" + criteria);
         logger.info("criteriaList:" + criteriaList);
-        String retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
-        // logger.info("periodStart:" + periodStart);
-        // logger.info("patientRef:" + patientRef);
-        // logger.info("patientServerUrl:" + patientServerUrl);
-        // logger.info("patientServerToken:" + patientServerToken);
-        // Setting server url and token for non local data access
-        if (criteria == null && criteriaList == null){
+        
+         if (criteria == null && criteriaList == null){
             throw new RuntimeException("Either Criteria or Criteria List should be given");
         }
         if (criteria != null){
@@ -324,30 +351,28 @@ public class MeasureOperationsProvider {
         if (libraryId == null){
             throw new RuntimeException(" LibraryId cannot be null");
         }
-        HashMap<String, Object> nonLocal = new HashMap<>();
-        Boolean local = true;
         if (patientServerUrl != null) {
             if (patientServerUrl != "") {
-                nonLocal.put("patient_server_url", patientServerUrl);
-                local = false;
-                retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
+                this.nonLocal.put("patient_server_url", patientServerUrl);
+                this.local = false;
+                this.retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
             }
 
         }
         if (patientServerToken != null) {
             if (patientServerToken != "") {
-                nonLocal.put("patient_server_token", patientServerToken);
+                this.nonLocal.put("patient_server_token", patientServerToken);
             }
 
 		}
 		if (dataBundle != null) {
-            retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
+            this.retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
             nonLocal.put("dataBundle", dataBundle);
             InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
 
         }
         if (!local) {
-            RemoteRetrieveProvider.patient_fhir.set(nonLocal);
+            RemoteRetrieveProvider.patient_fhir.set(this.nonLocal);
         }
         
         LibraryResourceProvider rp = new LibraryResourceProvider();
@@ -360,7 +385,7 @@ public class MeasureOperationsProvider {
         LibraryOperationsProvider libOpsProvider = new LibraryOperationsProvider(rp, this.narrativeProvider);
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(libOpsProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,libOpsProvider);
-        seed.setRetrieverType(retrieverType);
+        seed.setRetrieverType(this.retrieverType);
         if(valueSetsBundle !=null){
             seed.setValueSetsBundle(valueSetsBundle);
         }
@@ -596,11 +621,14 @@ public class MeasureOperationsProvider {
     public Parameters collectData(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
             @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "subject") String patientRef,
             @OptionalParam(name = "practitioner") String practitionerRef,
+            @OptionalParam(name = "patientServerUrl") String patientServerUrl,
+            @OptionalParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OptionalParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException {
         // TODO: Spec says that the periods are not required, but I am not sure what to
         // do when they aren't supplied so I made them required
         MeasureReport report = evaluateMeasure(theId, periodStart, periodEnd, null, null, patientRef, null,
-                practitionerRef, lastReceivedOn, null, null, null);
+                practitionerRef, lastReceivedOn,patientServerUrl,patientServerToken,dataBundle,null, null, null);
         report.setGroup(null);
 
         Parameters parameters = new Parameters();
@@ -705,7 +733,7 @@ public class MeasureOperationsProvider {
                 transactionBundle.addEntry(createTransactionEntry(res));
             }
         }
-
+        System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(transactionBundle));
         return (Resource) this.registry.getSystemDao().transaction(details, transactionBundle);
     }
 
