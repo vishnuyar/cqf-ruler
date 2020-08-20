@@ -14,7 +14,10 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Coverage;
+import org.hl7.fhir.r4.model.DeviceRequest;
 import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Medication;
+import org.hl7.fhir.r4.model.MedicationAdministration;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Procedure;
@@ -167,6 +170,21 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
             ServiceRequest evalResource = (ServiceRequest) resource;
             System.out.println("Reference:" + evalResource.getSubject().getReference());
             code = evalResource.getCode();
+            return checkCode(code, map);
+        } else if (dataType.equals("DeviceRequest")) {
+            DeviceRequest evalResource = (DeviceRequest) resource;
+            System.out.println("Reference:" + evalResource.getSubject().getReference());
+            code = evalResource.getCodeCodeableConcept();
+            return checkCode(code, map);
+        
+        } else if (dataType.equals("Medication")) {
+            Medication evalResource = (Medication) resource;
+            code = evalResource.getCode();
+            return checkCode(code, map);
+
+        } else if (dataType.equals("MedicationAdministration")) {
+            MedicationAdministration evalResource = (MedicationAdministration) resource;
+            code = evalResource.getMedicationCodeableConcept();
             return checkCode(code, map);
 
         } else if (dataType.equals("Coverage")) {
