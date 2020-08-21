@@ -103,7 +103,7 @@ public class MeasureEvaluation {
     public Parameters cqlEvaluate(Context context, String patientId, ArrayList<String> criteriaList, Library lib) {
         Parameters parameters = new Parameters();
         ArrayList<String> cqldef = new ArrayList<String>();
-        for (String criteria : criteriaList ){
+        for (String criteria : criteriaList) {
             if (criteria.equals("EvaluateCQL")) {
                 for (ExpressionDef expressionDef : lib.getStatements().getDef()) {
                     // System.out.println("Expression Type :" + expressionDef.getClass().getName());
