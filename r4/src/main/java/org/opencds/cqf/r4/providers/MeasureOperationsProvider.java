@@ -200,13 +200,13 @@ public class MeasureOperationsProvider {
      */
     @Operation(name = "$evaluate-measure", idempotent = true, type = Measure.class)
     public MeasureReport evaluateMeasure(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "measure") String measureRef,
-            @OptionalParam(name = "reportType") String reportType, @OptionalParam(name = "subject") String patientRef,
-            @OptionalParam(name = "productLine") String productLine,
-            @OptionalParam(name = "practitioner") String practitionerRef,
-            @OptionalParam(name = "lastReceivedOn") String lastReceivedOn,
-            @OptionalParam(name = "patientServerUrl") String patientServerUrl,
-            @OptionalParam(name = "patientServerToken") String patientServerToken,
+            @RequiredParam(name = "periodEnd") String periodEnd, @OperationParam(name = "measure") String measureRef,
+            @OperationParam(name = "reportType") String reportType, @OperationParam(name = "subject") String patientRef,
+            @OperationParam(name = "productLine") String productLine,
+            @OperationParam(name = "practitioner") String practitionerRef,
+            @OperationParam(name = "lastReceivedOn") String lastReceivedOn,
+            @OperationParam(name = "patientServerUrl") String patientServerUrl,
+            @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OptionalParam(name = "source") String source, @OptionalParam(name = "user") String user,
             @OptionalParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
@@ -619,10 +619,10 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$collect-data", idempotent = true, type = Measure.class)
     public Parameters collectData(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "subject") String patientRef,
-            @OptionalParam(name = "practitioner") String practitionerRef,
-            @OptionalParam(name = "patientServerUrl") String patientServerUrl,
-            @OptionalParam(name = "patientServerToken") String patientServerToken,
+            @RequiredParam(name = "periodEnd") String periodEnd, @OperationParam(name = "subject") String patientRef,
+            @OperationParam(name = "practitioner") String practitionerRef,
+            @OperationParam(name = "patientServerUrl") String patientServerUrl,
+            @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OptionalParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException {
         // TODO: Spec says that the periods are not required, but I am not sure what to
