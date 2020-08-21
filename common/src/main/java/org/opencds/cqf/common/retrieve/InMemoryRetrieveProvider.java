@@ -91,8 +91,7 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
     }
 
     private void printMapKeys(SearchParameterMap map) {
-        Boolean available = false;
-        ArrayList<String> searchCodes = new ArrayList<>();
+        System.out.println("Printing keys in search map");
         for (String key : map.keySet()) {
             System.out.println("key:" + key);
 
@@ -202,6 +201,7 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
         List<IBaseResource> resourceList = new ArrayList<>();
         String searchURL = "/" + dataType + map.toNormalizedQueryString(myFhirContext);
         ourLog.info("The query string is " + searchURL);
+        printMapKeys(map);
         if (patient_fhir.get().containsKey("dataBundle")) {
             IBaseBundle dataBundle = (IBaseBundle) patient_fhir.get().get("dataBundle");
             boolean resourceFound = false;
@@ -215,7 +215,6 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
                         String resourceType = resource.fhirType();
                         if (resourceType.equals(dataType)) {
                             resourceFound = true;
-                            printMapKeys(map);
                             Boolean validResource = getValidResource(dataType, map, resource);
                             if (validResource) {
                                 resourceList.add(resource);
