@@ -199,8 +199,8 @@ public class MeasureOperationsProvider {
      *
      */
     @Operation(name = "$evaluate-measure", idempotent = true, type = Measure.class)
-    public MeasureReport evaluateMeasure(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @OperationParam(name = "measure") String measureRef,
+    public MeasureReport evaluateMeasure(@IdParam IdType theId, @OperationParam(name = "periodStart") String periodStart,
+            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "measure") String measureRef,
             @OperationParam(name = "reportType") String reportType, @OperationParam(name = "subject") String patientRef,
             @OperationParam(name = "productLine") String productLine,
             @OperationParam(name = "practitioner") String practitionerRef,
@@ -618,8 +618,8 @@ public class MeasureOperationsProvider {
     }
 
     @Operation(name = "$collect-data", idempotent = true, type = Measure.class)
-    public Parameters collectData(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @OperationParam(name = "subject") String patientRef,
+    public Parameters collectData(@IdParam IdType theId, @OperationParam(name = "periodStart") String periodStart,
+            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "subject") String patientRef,
             @OperationParam(name = "practitioner") String practitionerRef,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
