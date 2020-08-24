@@ -146,6 +146,9 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
                         return true;
                     }
                 }
+            } else {
+                // if the key is not of type, then any encounter statisfies the search.
+                return true;
             }
         } else if (dataType.equals("Procedure")) {
             Procedure evalResource = (Procedure) resource;
