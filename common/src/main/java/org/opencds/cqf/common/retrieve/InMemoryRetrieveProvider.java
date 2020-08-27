@@ -16,6 +16,7 @@ import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.DeviceRequest;
 import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Immunization;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationAdministration;
 import org.hl7.fhir.r4.model.Observation;
@@ -187,6 +188,11 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
         } else if (dataType.equals("MedicationAdministration")) {
             MedicationAdministration evalResource = (MedicationAdministration) resource;
             code = evalResource.getMedicationCodeableConcept();
+            return checkCode(code, map);
+
+        } else if (dataType.equals("Immunization")) {
+            Immunization evalResource = (Immunization) resource;
+            code = evalResource.getVaccineCode();
             return checkCode(code, map);
 
         } else if (dataType.equals("Coverage")) {
