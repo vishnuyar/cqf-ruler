@@ -9,6 +9,7 @@ import ca.uhn.fhir.rest.param.ReferenceParam;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.cqframework.cql.elm.execution.ExpressionDef;
 import org.cqframework.cql.elm.execution.Library;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -140,8 +141,22 @@ public class MeasureEvaluation {
                             bundle.addEntry(new Bundle.BundleEntryComponent().setResource((Resource) obj));
                         } else {
                             if (obj != null) {
-                                System.out.println("Object of type" + obj.getClass());
-                                arrayValues.add(obj.toString());
+
+                                if (obj instanceof Patient.PatientLinkComponent) {
+                                    PatientLinkComponent linkComp = (PatientLinkComponent) obj;
+                                    System.out.println("link comp reference : "+linkComp.getOther().getReference());
+                                    Reference linkRef = new Reference();
+                                    linkRef.setReference(linkComp.getOther().getReference());
+                                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                                    pc.setValue(linkRef);
+                                    parameters.addParameter(pc);
+                
+                                } else {
+                                    System.out.println("Object of type" + obj.getClass());
+                                    arrayValues.add(obj.toString());
+                                }
+                                
 
                             }
 
@@ -152,7 +167,10 @@ public class MeasureEvaluation {
                         parameters.addParameter(
                                 new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(bundle));
                     } else {
-                        parameters.addParameter(cqlcriteria, String.join(",", arrayValues));
+                        if (arrayValues.size() > 0){
+                            parameters.addParameter(cqlcriteria, String.join(",", arrayValues));
+                        }
+                        
                     }
 
                 } else if (cqlResult instanceof Resource) {
@@ -264,7 +282,7 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     // System.out.println("casting to Period " + cqlPeriod.toString());
 
-                } else if (cqlResult instanceof String) {
+                }  else if (cqlResult instanceof String) {
                     parameters.addParameter(cqlcriteria, (String) cqlResult);
 
                 }
@@ -638,6 +656,7 @@ public class MeasureEvaluation {
                                 null);
                         populateResourceMap(context, MeasurePopulationType.INITIALPOPULATION, resources,
                                 codeToResourceMap);
+                                
                     }
 
                     break;
