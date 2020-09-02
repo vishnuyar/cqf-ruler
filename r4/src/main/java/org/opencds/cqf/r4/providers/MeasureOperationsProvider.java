@@ -410,14 +410,17 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Parameters careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
-            @OptionalParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "topic") String topic,
-            @RequiredParam(name = "subject") String patientRef, @OptionalParam(name = "program") String program,
+            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "topic") String topic,
+            @OperationParam(name = "subject") String patientRef, @OperationParam(name = "program") String program,
             @OperationParam(name = "measure") String measureparam,
-            @OptionalParam(name = "practitioner") String practitionerRef,
+            @OperationParam(name = "practitioner") String practitionerRef,
+            @OperationParam(name = "patientServerUrl") String patientServerUrl,
+            @OperationParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OperationParam(name = "status") String status) {
         // logger.info("Caregap starting");
         Parameters parameters = new Parameters();
-
+        this.retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
         List<Patient> patients = new ArrayList<>();
         List<Measure> measures = new ArrayList<>();
 
@@ -427,6 +430,29 @@ public class MeasureOperationsProvider {
 
         boolean topicgiven = false;
         boolean measuregiven = false;
+        if (patientServerUrl != null) {
+            if (patientServerUrl != "") {
+                nonLocal.put("patient_server_url", patientServerUrl);
+                this.local = false;
+                this.retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
+            }
+
+        }
+        if (patientServerToken != null) {
+            if (patientServerToken != "") {
+                this.nonLocal.put("patient_server_token", patientServerToken);
+            }
+
+        }
+        if (dataBundle != null) {
+            this.retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
+            this.nonLocal.put("dataBundle", dataBundle);
+            InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
+
+        }
+        if (!local) {
+            RemoteRetrieveProvider.patient_fhir.set(this.nonLocal);
+        }
 
         // This is temporary fix to get the topics for searching with texts
         Hashtable<String, String> topic_codes = new Hashtable<String, String>();
@@ -483,6 +509,7 @@ public class MeasureOperationsProvider {
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
+                seed.setRetrieverType(this.retrieverType);
         for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
             Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
