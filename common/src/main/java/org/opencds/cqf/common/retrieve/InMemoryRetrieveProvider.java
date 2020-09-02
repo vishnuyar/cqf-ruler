@@ -1,6 +1,7 @@
 package org.opencds.cqf.common.retrieve;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +38,9 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
     org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger("inmemorysearch");
     DaoRegistry registry;
     private FhirContext myFhirContext = FhirContext.forR4();
+    private static String deepSearch [] = {"Patient", "Encounter","Procedure","Observation","Condition",
+        "ServiceRequest","DeviceRequest","Medication","MedicationAdministration","Immunization","Coverage"};
+        
     public static ThreadLocal<HashMap> patient_fhir;
     static {
         patient_fhir = new ThreadLocal<HashMap>();
@@ -224,10 +228,15 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
                         String resourceType = resource.fhirType();
                         if (resourceType.equals(dataType)) {
                             resourceFound = true;
-                            Boolean validResource = getValidResource(dataType, map, resource);
-                            if (validResource) {
+                            if (Arrays.asList(deepSearch).contains(dataType)){
+                                Boolean validResource = getValidResource(dataType, map, resource);
+                                if (validResource) {
+                                    resourceList.add(resource);
+                                }
+                            } else {
                                 resourceList.add(resource);
                             }
+                            
 
                         }
 
