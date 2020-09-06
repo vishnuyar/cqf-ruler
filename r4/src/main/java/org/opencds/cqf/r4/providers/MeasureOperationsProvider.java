@@ -54,6 +54,7 @@ import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
 import org.opencds.cqf.cql.execution.Context;
 import org.opencds.cqf.cql.execution.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
+import org.opencds.cqf.cql.data.DataProvider;
 import org.opencds.cqf.measure.r4.CqfMeasure;
 import org.opencds.cqf.r4.evaluation.MeasureEvaluation;
 import org.opencds.cqf.r4.evaluation.MeasureEvaluationSeed;
@@ -242,9 +243,6 @@ public class MeasureOperationsProvider {
             InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
 
         }
-        if (!local) {
-            RemoteRetrieveProvider.patient_fhir.set(this.nonLocal);
-        }
         seed.setRetrieverType(this.retrieverType);
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
 
@@ -409,7 +407,7 @@ public class MeasureOperationsProvider {
     }
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
-    public Parameters careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
+    public Parameters careGapsReport(@OperationParam(name = "periodStart") String periodStart,
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "topic") String topic,
             @OperationParam(name = "subject") String patientRef, @OperationParam(name = "program") String program,
             @OperationParam(name = "measure") String measureparam,
@@ -427,7 +425,7 @@ public class MeasureOperationsProvider {
         if ((patientRef == null) & (practitionerRef == null)) {
             throw new RuntimeException("Subject and Practitioner both cannot be null!");
         }
-
+        System.out.println("Patient server url: "+patientServerUrl);
         boolean topicgiven = false;
         boolean measuregiven = false;
         if (patientServerUrl != null) {
@@ -499,17 +497,23 @@ public class MeasureOperationsProvider {
                 measures.add(res);
             }
         }
-        if (practitionerRef != null) {
-            List<Patient> practitionerPatients = getPractitionerPatients(practitionerRef);
-            patients.addAll(practitionerPatients);
-        }
-        if (patientRef != null) {
-            patients.add(getPatients(patientRef));
-        }
+        
+        
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
                 seed.setRetrieverType(this.retrieverType);
+                seed.setupLibrary("FHIRHelpers", periodStart, periodEnd, null, null, null, null);
+
+        if (practitionerRef != null) {
+            List<Patient> practitionerPatients = getPractitionerPatients(practitionerRef,seed.getDataProvider());
+            patients.addAll(practitionerPatients);
+        }
+        if (patientRef != null) {
+            patients.addAll(getPatients(patientRef,seed.getDataProvider()));
+        }
+        
+        
         for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
             Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
@@ -533,7 +537,7 @@ public class MeasureOperationsProvider {
                 .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
 
-        composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getId());
+        composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getIdElement().getIdPart());
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
@@ -554,7 +558,7 @@ public class MeasureOperationsProvider {
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                     seed.getMeasurementPeriod());
-            report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getId());
+            report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getIdElement().getIdPart());
             reports.add(report);
             composition.addSection(section);
         }
@@ -597,7 +601,7 @@ public class MeasureOperationsProvider {
         return patients;
     }
 
-    private List<Patient> getPractitionerPatients(String practitionerRef) {
+    private List<Patient> getPractitionerPatients(String practitionerRef,DataProvider provider) {
         SearchParameterMap map = new SearchParameterMap();
         map.add("general-practitioner", new ReferenceParam(
                 practitionerRef.startsWith("Practitioner/") ? practitionerRef : "Practitioner/" + practitionerRef));
@@ -609,13 +613,21 @@ public class MeasureOperationsProvider {
         return patients;
     }
 
-    private Patient getPatients(String patientRef) {
-        if (!patientRef.startsWith("Patient/")) {
-            patientRef = "Patient/" + patientRef;
+    private List<Patient> getPatients(String patientRef,DataProvider provider) {
+        if (patientRef.startsWith("Patient/")) {
+            patientRef = patientRef.replace("Patient/", "");
         }
-        IIdType id = new Reference(patientRef).getReferenceElement();
-        Patient patient = (Patient) registry.getResourceDao("Patient").read(id);
-        return patient;
+        List<Patient> patients = new ArrayList<>();
+        Iterable<Object> patientRetrieve = provider.retrieve("Patient", "id", patientRef, "Patient", null, null, null, null,
+                null, null, null, null);
+
+        for (Iterator iterator = patientRetrieve.iterator(); iterator.hasNext();) {
+            Patient patient = (Patient) iterator.next();
+            patients.add(patient);
+        }
+        // logger.info("patients available!!" + patients.size());
+
+        return patients;
     }
 
     @Operation(name = "$collect-data", idempotent = true, type = Measure.class)
