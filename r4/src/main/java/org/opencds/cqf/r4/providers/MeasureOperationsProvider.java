@@ -35,6 +35,7 @@ import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Group.GroupMemberComponent;
 import org.cqframework.cql.cql2elm.LibraryManager;
 import org.cqframework.cql.cql2elm.ModelManager;
 import org.cqframework.cql.elm.execution.Library;
@@ -419,12 +420,25 @@ public class MeasureOperationsProvider {
         // logger.info("Caregap starting");
         Parameters parameters = new Parameters();
         this.retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
-        List<Patient> patients = new ArrayList<>();
+        List<String> patients = new ArrayList<>();
         List<Measure> measures = new ArrayList<>();
+        boolean patientSearch = false;
+        boolean groupSearch = false;
 
         if ((patientRef == null) & (practitionerRef == null)) {
             throw new RuntimeException("Subject and Practitioner both cannot be null!");
         }
+
+        if (patientRef != null){
+            if(patientRef.startsWith("Patient/")){
+                patientSearch = true;
+            } else if(patientRef.startsWith("Group/")){
+                groupSearch = true;
+            } else {
+                throw new RuntimeException("Subject should start with either Patient or Group");
+            }
+        }
+
         System.out.println("Patient server url: "+patientServerUrl);
         boolean topicgiven = false;
         boolean measuregiven = false;
@@ -506,38 +520,45 @@ public class MeasureOperationsProvider {
                 seed.setupLibrary("FHIRHelpers", periodStart, periodEnd, null, null, null, null);
 
         if (practitionerRef != null) {
-            List<Patient> practitionerPatients = getPractitionerPatients(practitionerRef,seed.getDataProvider());
+            List<String> practitionerPatients = getPractitionerPatients(practitionerRef,seed.getDataProvider());
             patients.addAll(practitionerPatients);
         }
         if (patientRef != null) {
-            patients.addAll(getPatients(patientRef,seed.getDataProvider()));
+            if (patientSearch){
+                patients.addAll(getPatients(patientRef,seed.getDataProvider()));
+            }
+            if (groupSearch){
+                patients.addAll(getGroupPatients(patientRef,seed.getDataProvider()));
+            }
+            
         }
         
         
         for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
-            Patient patient = (Patient) iterator.next();
+            String patient = (String) iterator.next();
             Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
             parameters.addParameter(new Parameters.ParametersParameterComponent()
-                    .setName("Care Gap Report for " + patient.getIdBase()).setResource(careGapBundle));
+                    .setName("Care Gap Report for " + patient).setResource(careGapBundle));
 
         }
         return parameters;
 
     }
 
-    private Bundle getCareGapReport(Patient patient, List<Measure> measures, String status, String periodStart,
+    private Bundle getCareGapReport(String patientRef, List<Measure> measures, String status, String periodStart,
             String periodEnd, MeasureEvaluationSeed seed) {
         Bundle careGapReport = new Bundle();
         careGapReport.setType(Bundle.BundleType.DOCUMENT);
 
         Composition composition = new Composition();
-        // TODO - this is a placeholder code for now ... replace with preferred code
-        // once identified
+        if (patientRef.startsWith("Patient/")) {
+            patientRef = patientRef.replace("Patient/", "");
+        }
         CodeableConcept typeCode = new CodeableConcept()
                 .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
 
-        composition.setSubject(new Reference(patient)).setTitle("Care Gap Report for Patient:" + patient.getIdElement().getIdPart());
+        composition.setSubject(new Reference("Patient/"+patientRef)).setTitle("Care Gap Report for Patient:" + patientRef);
         List<MeasureReport> reports = new ArrayList<>();
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
@@ -558,7 +579,7 @@ public class MeasureOperationsProvider {
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                     seed.getMeasurementPeriod());
-            report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patient.getIdElement().getIdPart());
+            report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
             reports.add(report);
             composition.addSection(section);
         }
@@ -575,9 +596,9 @@ public class MeasureOperationsProvider {
                     logger.info("the status is " + status);
                     if (status == null) {
                         addreport = true;
-                    } else if ((scorevalue.compareTo(new BigDecimal(1)) == 0) && status.equals("closed-gaps")) {
+                    } else if ((scorevalue.compareTo(new BigDecimal(1)) == 0) && status.equals("closed-gap")) {
                         addreport = true;
-                    } else if ((scorevalue.compareTo(new BigDecimal(0)) == 0) && status.equals("open-gaps")) {
+                    } else if ((scorevalue.compareTo(new BigDecimal(0)) == 0) && status.equals("open-gap")) {
                         addreport = true;
 
                     } else {
@@ -593,37 +614,50 @@ public class MeasureOperationsProvider {
 
     }
 
-    private List<Patient> getGroupPatients(String groupId) {
-        List<Patient> patients = new ArrayList<>();
+    private List<String> getGroupPatients(String groupRef,DataProvider provider) {
+        if (groupRef.startsWith("Group/")) {
+            groupRef = groupRef.replace("Group/", "");
+        }
+        List<String> patients = new ArrayList<>();
+        System.out.println("Search for patients in the group: "+groupRef);
+        Iterable<Object> groupRetrieve = provider.retrieve("Group", "id", groupRef, "Group", null, null, null, null,
+                null, null, null, null);
 
-        // // IIdType(GroupId));
-        // patientgroup.getMember();
+        for (Iterator iterator = groupRetrieve.iterator(); iterator.hasNext();) {
+            Group group = (Group) iterator.next();
+            List<GroupMemberComponent> memberList = group.getMember();
+            for (GroupMemberComponent member: memberList){
+                patients.add(member.getEntity().getReference());
+            }
+        }
+        // logger.info("patients available!!" + patients.size());
+
         return patients;
     }
 
-    private List<Patient> getPractitionerPatients(String practitionerRef,DataProvider provider) {
+    private List<String> getPractitionerPatients(String practitionerRef,DataProvider provider) {
         SearchParameterMap map = new SearchParameterMap();
         map.add("general-practitioner", new ReferenceParam(
                 practitionerRef.startsWith("Practitioner/") ? practitionerRef : "Practitioner/" + practitionerRef));
 
-        List<Patient> patients = new ArrayList<>();
+        List<String> patients = new ArrayList<>();
         IBundleProvider patientProvider = registry.getResourceDao("Patient").search(map);
         List<IBaseResource> patientList = patientProvider.getResources(0, patientProvider.size());
-        patientList.forEach(x -> patients.add((Patient) x));
+        patientList.forEach(x -> patients.add((String) x.getIdElement().getIdPart()));
         return patients;
     }
 
-    private List<Patient> getPatients(String patientRef,DataProvider provider) {
+    private List<String> getPatients(String patientRef,DataProvider provider) {
         if (patientRef.startsWith("Patient/")) {
             patientRef = patientRef.replace("Patient/", "");
         }
-        List<Patient> patients = new ArrayList<>();
+        List<String> patients = new ArrayList<>();
         Iterable<Object> patientRetrieve = provider.retrieve("Patient", "id", patientRef, "Patient", null, null, null, null,
                 null, null, null, null);
 
         for (Iterator iterator = patientRetrieve.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
-            patients.add(patient);
+            patients.add(patient.getIdElement().getIdPart());
         }
         // logger.info("patients available!!" + patients.size());
 
