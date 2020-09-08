@@ -228,7 +228,7 @@ public class InMemoryRetrieveProvider extends SearchParamFhirRetrieveProvider {
                         String resourceType = resource.fhirType();
                         if (resourceType.equals(dataType)) {
                             resourceFound = true;
-                            if (Arrays.asList(deepSearch).contains(dataType)){
+                            if (map.keySet().size()>1){
                                 Boolean validResource = getValidResource(dataType, map, resource);
                                 if (validResource) {
                                     resourceList.add(resource);
