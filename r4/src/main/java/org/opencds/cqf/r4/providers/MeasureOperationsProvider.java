@@ -244,6 +244,9 @@ public class MeasureOperationsProvider {
             InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
 
         }
+        if (!local) {
+            RemoteRetrieveProvider.patient_fhir.set(this.nonLocal);
+        }
         seed.setRetrieverType(this.retrieverType);
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
 
