@@ -249,7 +249,9 @@ public class MeasureOperationsProvider {
         }
         seed.setRetrieverType(this.retrieverType);
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
-
+        if (patientRef.startsWith("Patient/")) {
+            patientRef = patientRef.replace("Patient/", "");
+        }
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                 seed.getMeasurementPeriod());
         if (reportType != null) {
