@@ -3,6 +3,7 @@ package org.opencds.cqf.r4.providers;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -19,6 +20,7 @@ import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.DetectedIssue;
 import org.hl7.fhir.r4.model.DeviceRequest;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Group;
@@ -413,7 +415,7 @@ public class MeasureOperationsProvider {
     }
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
-    public Parameters careGapsReport(@OperationParam(name = "periodStart") String periodStart,
+    public Resource careGapsReport(@OperationParam(name = "periodStart") String periodStart,
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "topic") String topic,
             @OperationParam(name = "subject") String patientRef, @OperationParam(name = "program") String program,
             @OperationParam(name = "measure") String measureparam,
@@ -517,13 +519,16 @@ public class MeasureOperationsProvider {
             }
         }
         
+        if (measures.size()==0){
+            throw new RuntimeException("Neither topic nor measure parameter resolves to available Measure for running care gap report");
+        }
         
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
                 seed.setRetrieverType(this.retrieverType);
-                seed.setupLibrary("FHIRHelpers", periodStart, periodEnd, null, null, null, null);
-
+                //Hack solution for getting Provider -- Needed for getting patients data
+                seed.setup(measures.get(0), periodStart, periodEnd, null, null, null, null);
         if (practitionerRef != null) {
             List<String> practitionerPatients = getPractitionerPatients(practitionerRef,seed.getDataProvider());
             patients.addAll(practitionerPatients);
@@ -538,15 +543,19 @@ public class MeasureOperationsProvider {
             
         }
         
-        
-        for (Iterator iterator = patients.iterator(); iterator.hasNext();) {
-            String patient = (String) iterator.next();
-            Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
-            parameters.addParameter(new Parameters.ParametersParameterComponent()
-                    .setName("Care Gap Report for " + patient).setResource(careGapBundle));
-
+        if (patients.size()>1){
+            for (String patient:patients) {
+                Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
+                parameters.addParameter(new Parameters.ParametersParameterComponent()
+                        .setName("return").setResource(careGapBundle));
+    
+            }
+            return parameters;
+        } else {
+            return getCareGapReport(patients.get(0), measures, status, periodStart, periodEnd, seed);
+            
         }
-        return parameters;
+        
 
     }
 
@@ -554,6 +563,7 @@ public class MeasureOperationsProvider {
             String periodEnd, MeasureEvaluationSeed seed) {
         Bundle careGapReport = new Bundle();
         careGapReport.setType(Bundle.BundleType.DOCUMENT);
+        careGapReport.setTimestamp(new Date());
 
         Composition composition = new Composition();
         if (patientRef.startsWith("Patient/")) {
@@ -565,6 +575,7 @@ public class MeasureOperationsProvider {
 
         composition.setSubject(new Reference("Patient/"+patientRef)).setTitle("Care Gap Report for Patient:" + patientRef);
         List<MeasureReport> reports = new ArrayList<>();
+        List<DetectedIssue> detectedIssues = new ArrayList<DetectedIssue>();
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
             Composition.SectionComponent section = new Composition.SectionComponent();
