@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -569,8 +570,12 @@ public class MeasureOperationsProvider {
         if (patientRef.startsWith("Patient/")) {
             patientRef = patientRef.replace("Patient/", "");
         }
-        CodeableConcept typeCode = new CodeableConcept()
-                .addCoding(new Coding().setSystem("http://loinc.org").setCode("57024-2"));
+        CodeableConcept typeCode = new CodeableConcept();
+        typeCode.addCoding(new Coding()
+        .setCode("gaps-doc")
+        .setSystem("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-doc-type")
+        .setDisplay("Gaps in Care Report"));
+        
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
 
         composition.setSubject(new Reference("Patient/"+patientRef)).setTitle("Care Gap Report for Patient:" + patientRef);
@@ -583,54 +588,132 @@ public class MeasureOperationsProvider {
             if (measure.hasTitle()) {
                 section.setTitle(measure.getTitle());
             }
-            CodeableConcept improvementNotation = new CodeableConcept().addCoding(new Coding().setCode("increase")
-                    .setSystem("http://terminology.hl7.org/CodeSystem/measure-improvement-notation")); // defaulting to
-                                                                                                       // "increase"
-            if (measure.hasImprovementNotation()) {
-                improvementNotation = measure.getImprovementNotation();
-                section.setText(new Narrative().setStatus(Narrative.NarrativeStatus.GENERATED)
-                        .setDiv(new XhtmlNode().setValue(improvementNotation.getCodingFirstRep().getCode())));
-            }
+            
 
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
                     seed.getMeasurementPeriod());
             report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
+            report.setId(UUID.randomUUID().toString());
+            report.setDate(new Date());
+            //Check for detected issue
+            DetectedIssue detected = checkDetectedIssue(report,patientRef);
+            if (detected != null){
+                detectedIssues.add(detected);
+                section.addEntry(new Reference("DetectedIssue/" + detected.getIdElement().getIdPart()));
+            }
             reports.add(report);
             composition.addSection(section);
         }
+        
 
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
         // Add the reports based on status parameter
         boolean addreport;
         for (MeasureReport rep : reports) {
-            for (MeasureReport.MeasureReportGroupComponent group : rep.getGroup()) {
+            if (getMeasureScore(rep) != null){
+                boolean openGap = checkOpenGap(rep);
+            if(status == null || status == ""){
+                addreport = true;
+            } else if (status.equals("open-gap") && openGap){
+                addreport = true;
+            } else if (status.equals("closed-gap") && !openGap){
+                addreport = true;
+            } else {
                 addreport = false;
-                if (group.hasMeasureScore()) {
-                    BigDecimal scorevalue = group.getMeasureScore().getValue();
-                    logger.info("the measure score is " + scorevalue.toString());
-                    logger.info("the status is " + status);
-                    if (status == null) {
-                        addreport = true;
-                    } else if ((scorevalue.compareTo(new BigDecimal(1)) == 0) && status.equals("closed-gap")) {
-                        addreport = true;
-                    } else if ((scorevalue.compareTo(new BigDecimal(0)) == 0) && status.equals("open-gap")) {
-                        addreport = true;
-
-                    } else {
-                        addreport = false;
-                    }
-                }
-                if (addreport) {
-                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
-                }
+            }
+            if (addreport) {
+                addEvaluatedResources(rep);
+                careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
             }
         }
+            
+            
+        }
+        for (DetectedIssue detectedIssue : detectedIssues) {
+            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
+        } 
         return careGapReport;
 
     }
 
-    private List<String> getGroupPatients(String groupRef,DataProvider provider) {
+    private void addEvaluatedResources(MeasureReport rep) {
+        Parameters parameters = new Parameters();
+        if (rep.hasContained()) {
+            for (Resource contained : rep.getContained()) {
+                if (contained instanceof Bundle) {
+                    addEvaluatedResourcesToParameters((Bundle) contained, parameters,null);
+                    if(null != parameters && !parameters.isEmpty()) {
+                        List <Reference> evaluatedResource = new ArrayList<>();
+                        parameters.getParameter().forEach(parameter -> {
+                            Reference newEvaluatedResourceItem = new Reference();
+                            newEvaluatedResourceItem.setReference(parameter.getResource().getId());
+                            List<Extension> evalResourceExt = new ArrayList<>();
+                            evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
+                                    new CodeableConcept()
+                                            .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", "initial-population", "initial-population"))));
+                            newEvaluatedResourceItem.setExtension(evalResourceExt);
+                            evaluatedResource.add(newEvaluatedResourceItem);
+                        });
+                        rep.setEvaluatedResource(evaluatedResource);
+                    }
+                }
+            }
+        }
+    }
+
+    private DetectedIssue checkDetectedIssue(MeasureReport report, String patientRef) {
+        boolean isOpenGap = checkOpenGap(report);
+        
+        if (isOpenGap) {
+            return createDetectedIssue(report,patientRef);
+        } else {
+            return null;
+        }
+    }
+
+    private boolean checkOpenGap(MeasureReport report) {
+        boolean openGap = false;
+        String improvementNotation = report.getImprovementNotation().getCodingFirstRep().getCode().toLowerCase();
+        BigDecimal measureScore = getMeasureScore(report);
+        if (measureScore != null){
+            if (((improvementNotation.equals("increase")) && (measureScore.compareTo(new BigDecimal(0))) <= 0)){
+                openGap = true;
+            } else if (((improvementNotation.equals("decrease")) && (measureScore.compareTo(new BigDecimal(1))) >= 0)){
+                openGap = true;
+            }
+        }
+        
+        
+        return openGap;
+    }
+
+    private DetectedIssue createDetectedIssue(MeasureReport report, String patientRef) {
+        DetectedIssue detectedIssue = new DetectedIssue();
+        detectedIssue.setId(UUID.randomUUID().toString());
+        detectedIssue.setStatus(DetectedIssue.DetectedIssueStatus.FINAL);
+        detectedIssue.setPatient(new Reference("Patient/"+patientRef));
+        detectedIssue.getEvidence().add(new DetectedIssue.DetectedIssueEvidenceComponent().addDetail(new Reference("MeasureReport/" + report.getId())));
+        CodeableConcept code = new CodeableConcept()
+            .addCoding(new Coding()
+            .setSystem("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/detectedissue-category")
+            .setCode("care-gap")
+            .setDisplay("Gap in Care Detected"));
+        detectedIssue.setCode(code);
+        return detectedIssue;
+    }
+
+    private BigDecimal getMeasureScore(MeasureReport report) {
+        BigDecimal scorevalue = null;
+        for (MeasureReport.MeasureReportGroupComponent group : report.getGroup()) {
+            if (group.hasMeasureScore()) {
+                scorevalue = group.getMeasureScore().getValue();
+            }
+        }
+        return scorevalue;
+    }
+
+    private List<String> getGroupPatients(String groupRef, DataProvider provider) {
         if (groupRef.startsWith("Group/")) {
             groupRef = groupRef.replace("Group/", "");
         }

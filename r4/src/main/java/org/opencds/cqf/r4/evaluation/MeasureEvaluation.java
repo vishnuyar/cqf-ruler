@@ -430,7 +430,7 @@ public class MeasureEvaluation {
         reportBuilder.buildPeriod(measurementPeriod);
 
         MeasureReport report = reportBuilder.build();
-
+        report.setImprovementNotation(measure.getImprovementNotation());
         HashMap<String, Resource> resources = new HashMap<>();
         HashMap<String, HashSet<String>> codeToResourceMap = new HashMap<>();
 
@@ -709,11 +709,17 @@ public class MeasureEvaluation {
         }
 
         if (!resources.isEmpty()) {
-            FhirMeasureBundler bundler = new FhirMeasureBundler();
-            org.hl7.fhir.r4.model.Bundle evaluatedResources = bundler.bundle(resources.values());
-            evaluatedResources.setId(UUID.randomUUID().toString());
-            report.setEvaluatedResource(Collections.singletonList(new Reference('#' + evaluatedResources.getId())));
-            report.addContained(evaluatedResources);
+            
+            List<Reference> evaluatedResourceIds = new ArrayList<>();
+            List<Resource> evaluatedResources = new ArrayList<>();
+            resources.forEach((key, resource) -> {
+                evaluatedResourceIds.add(new Reference(resource.getId()));
+                report.addContained(resource);
+
+            });
+            report.setEvaluatedResource(evaluatedResourceIds);
+            
+            
         }
 
         return report;
