@@ -29,6 +29,7 @@ import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.ListResource;
 import org.hl7.fhir.r4.model.Measure;
 import org.hl7.fhir.r4.model.MeasureReport;
+import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Narrative;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Patient;
@@ -40,6 +41,8 @@ import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Group.GroupMemberComponent;
 import org.hl7.fhir.r4.model.ListResource.ListEntryComponent;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.WordUtils;
 import org.cqframework.cql.cql2elm.LibraryManager;
 import org.cqframework.cql.cql2elm.ModelManager;
 import org.cqframework.cql.elm.execution.Library;
@@ -587,7 +590,6 @@ public class MeasureOperationsProvider {
         MeasureReport report = new MeasureReport();
         for (Measure measure : measures) {
             Composition.SectionComponent section = new Composition.SectionComponent();
-            section.addEntry(new Reference(measure));
             if (measure.hasTitle()) {
                 section.setTitle(measure.getTitle());
             }
@@ -599,6 +601,8 @@ public class MeasureOperationsProvider {
             report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
             report.setId(UUID.randomUUID().toString());
             report.setDate(new Date());
+            report.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm"));
+            section.setFocus(new Reference("MeasureReport/" + report.getId()));
             //Check for detected issue
             DetectedIssue detected = checkDetectedIssue(report,patientRef);
             if (detected != null){
@@ -667,11 +671,12 @@ public class MeasureOperationsProvider {
                 if ((entry.getResource() instanceof ListResource)) {
                     ListResource listResource = (ListResource) entry.getResource();
                     String popType = listResource.getTitle();
+                    String displayPop = WordUtils.capitalize(popType.replace("-"," "));
                     for( ListEntryComponent listComponent: listResource.getEntry()){
                         List<Extension> evalResourceExt = new ArrayList<>();
                         evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
                         new CodeableConcept()
-                                .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", popType, popType))));
+                                .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", popType, displayPop))));
                         Reference evaluateRef = listComponent.getItem();
                         evaluateRef.setExtension(evalResourceExt);
                         listRef.add(evaluateRef);
