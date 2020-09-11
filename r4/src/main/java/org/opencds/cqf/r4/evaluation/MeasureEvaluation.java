@@ -709,15 +709,19 @@ public class MeasureEvaluation {
         }
 
         if (!resources.isEmpty()) {
+            FhirMeasureBundler bundler = new FhirMeasureBundler();
+            org.hl7.fhir.r4.model.Bundle evaluatedResources = bundler.bundle(resources.values());
+            evaluatedResources.setId(UUID.randomUUID().toString());
+            report.setEvaluatedResource(Collections.singletonList(new Reference('#' + evaluatedResources.getId())));
+            report.addContained(evaluatedResources);
             
-            List<Reference> evaluatedResourceIds = new ArrayList<>();
-            List<Resource> evaluatedResources = new ArrayList<>();
-            resources.forEach((key, resource) -> {
-                evaluatedResourceIds.add(new Reference(resource.getId()));
-                report.addContained(resource);
-
-            });
-            report.setEvaluatedResource(evaluatedResourceIds);
+            // List<Reference> evaluatedResourceIds = new ArrayList<>();
+            
+            // for (Resource resource: resources.values()){
+            //     evaluatedResourceIds.add(new Reference(resource.getId()));
+                
+            // }
+            // report.setEvaluatedResource(evaluatedResourceIds);
             
             
         }

@@ -252,7 +252,7 @@ public class MeasureOperationsProvider {
         }
         seed.setRetrieverType(this.retrieverType);
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
-        if (patientRef.startsWith("Patient/")) {
+        if ((patientRef != null) && (patientRef.startsWith("Patient/"))){
             patientRef = patientRef.replace("Patient/", "");
         }
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
@@ -552,9 +552,11 @@ public class MeasureOperationsProvider {
     
             }
             return parameters;
-        } else {
+        } else if(patients.size()==1) {
             return getCareGapReport(patients.get(0), measures, status, periodStart, periodEnd, seed);
             
+        } else {
+            throw new RuntimeException("Subject not found for running care gap report");
         }
         
 
@@ -623,21 +625,26 @@ public class MeasureOperationsProvider {
                 addreport = false;
             }
             if (addreport) {
-                addEvaluatedResources(rep);
+                Parameters parameters = addEvaluatedResources(rep);
                 careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
+                for (DetectedIssue detectedIssue : detectedIssues) {
+                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
+                }
+                for ( Parameters.ParametersParameterComponent parameter:parameters.getParameter()){
+                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(parameter.getResource()));
+                } 
+                
             }
         }
             
             
         }
-        for (DetectedIssue detectedIssue : detectedIssues) {
-            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
-        } 
+        
         return careGapReport;
 
     }
 
-    private void addEvaluatedResources(MeasureReport rep) {
+    private Parameters addEvaluatedResources(MeasureReport rep) {
         Parameters parameters = new Parameters();
         if (rep.hasContained()) {
             for (Resource contained : rep.getContained()) {
@@ -660,6 +667,7 @@ public class MeasureOperationsProvider {
                 }
             }
         }
+        return parameters;
     }
 
     private DetectedIssue checkDetectedIssue(MeasureReport report, String patientRef) {
@@ -724,10 +732,13 @@ public class MeasureOperationsProvider {
 
         for (Iterator iterator = groupRetrieve.iterator(); iterator.hasNext();) {
             Group group = (Group) iterator.next();
-            List<GroupMemberComponent> memberList = group.getMember();
-            for (GroupMemberComponent member: memberList){
-                patients.add(member.getEntity().getReference());
+            if (group.getIdElement().getIdPart().equals(groupRef)){
+                List<GroupMemberComponent> memberList = group.getMember();
+                for (GroupMemberComponent member: memberList){
+                    patients.add(member.getEntity().getReference());
+                }
             }
+            
         }
         // logger.info("patients available!!" + patients.size());
 
