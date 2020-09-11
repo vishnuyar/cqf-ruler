@@ -39,6 +39,7 @@ import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Group.GroupMemberComponent;
+import org.hl7.fhir.r4.model.ListResource.ListEntryComponent;
 import org.cqframework.cql.cql2elm.LibraryManager;
 import org.cqframework.cql.cql2elm.ModelManager;
 import org.cqframework.cql.elm.execution.Library;
@@ -650,24 +651,35 @@ public class MeasureOperationsProvider {
             for (Resource contained : rep.getContained()) {
                 if (contained instanceof Bundle) {
                     addEvaluatedResourcesToParameters((Bundle) contained, parameters,null);
-                    if(null != parameters && !parameters.isEmpty()) {
-                        List <Reference> evaluatedResource = new ArrayList<>();
-                        parameters.getParameter().forEach(parameter -> {
-                            Reference newEvaluatedResourceItem = new Reference();
-                            newEvaluatedResourceItem.setReference(parameter.getResource().getId());
-                            List<Extension> evalResourceExt = new ArrayList<>();
-                            evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
-                                    new CodeableConcept()
-                                            .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", "initial-population", "initial-population"))));
-                            newEvaluatedResourceItem.setExtension(evalResourceExt);
-                            evaluatedResource.add(newEvaluatedResourceItem);
-                        });
-                        rep.setEvaluatedResource(evaluatedResource);
-                    }
+                    List<Reference> listRef = populateListReferences((Bundle) contained);
+                    rep.setEvaluatedResource(listRef);
+                    
                 }
             }
         }
         return parameters;
+    }
+
+    private List<Reference> populateListReferences(Bundle bundle) {
+        List<Reference> listRef = new ArrayList<>();
+        if (bundle.hasEntry()) {
+            for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+                if ((entry.getResource() instanceof ListResource)) {
+                    ListResource listResource = (ListResource) entry.getResource();
+                    String popType = listResource.getTitle();
+                    for( ListEntryComponent listComponent: listResource.getEntry()){
+                        List<Extension> evalResourceExt = new ArrayList<>();
+                        evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
+                        new CodeableConcept()
+                                .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", popType, popType))));
+                        Reference evaluateRef = listComponent.getItem();
+                        evaluateRef.setExtension(evalResourceExt);
+                        listRef.add(evaluateRef);
+                    }
+                }
+            }
+        }
+        return listRef;    
     }
 
     private DetectedIssue checkDetectedIssue(MeasureReport report, String patientRef) {

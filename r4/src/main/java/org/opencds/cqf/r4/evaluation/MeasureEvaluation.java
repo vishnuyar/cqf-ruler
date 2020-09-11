@@ -697,7 +697,7 @@ public class MeasureEvaluation {
             org.hl7.fhir.r4.model.ListResource list = new org.hl7.fhir.r4.model.ListResource();
             for (String element : codeToResourceMap.get(key)) {
                 org.hl7.fhir.r4.model.ListResource.ListEntryComponent comp = new org.hl7.fhir.r4.model.ListResource.ListEntryComponent();
-                comp.setItem(new Reference('#' + element));
+                comp.setItem(new Reference(element));
                 list.addEntry(comp);
             }
 
@@ -712,7 +712,7 @@ public class MeasureEvaluation {
             FhirMeasureBundler bundler = new FhirMeasureBundler();
             org.hl7.fhir.r4.model.Bundle evaluatedResources = bundler.bundle(resources.values());
             evaluatedResources.setId(UUID.randomUUID().toString());
-            report.setEvaluatedResource(Collections.singletonList(new Reference('#' + evaluatedResources.getId())));
+            report.setEvaluatedResource(Collections.singletonList(new Reference(evaluatedResources.getId())));
             report.addContained(evaluatedResources);
             
             // List<Reference> evaluatedResourceIds = new ArrayList<>();
