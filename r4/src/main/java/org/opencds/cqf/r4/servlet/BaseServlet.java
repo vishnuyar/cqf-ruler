@@ -26,7 +26,7 @@ import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
 import org.opencds.cqf.library.r4.NarrativeProvider;
 import org.opencds.cqf.measure.r4.CodeTerminologyRef;
 import org.opencds.cqf.measure.r4.CqfMeasure;

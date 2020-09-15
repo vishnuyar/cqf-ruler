@@ -24,6 +24,7 @@ import ca.uhn.fhir.jpa.dao.DeleteMethodOutcome;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.ISearchBuilder;
 import ca.uhn.fhir.jpa.delete.DeleteConflictList;
+import ca.uhn.fhir.jpa.model.cross.ResourcePersistentId;
 import ca.uhn.fhir.jpa.model.entity.BaseHasResource;
 import ca.uhn.fhir.jpa.model.entity.IBaseResourceEntity;
 import ca.uhn.fhir.jpa.model.entity.ResourceTable;
@@ -61,12 +62,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     public void injectDependenciesIntoBundleProvider(PersistedJpaBundleProvider theProvider) {
         // TODO Auto-generated method stub
 
-    }
-
-    @Override
-    public ISearchBuilder newSearchBuilder() {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     @Override
@@ -229,11 +224,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         return null;
     }
 
-    @Override
-    public Set<Long> processMatchUrl(String theMatchUrl, RequestDetails theRequest) {
-        // TODO Auto-generated method stub
-        return null;
-    }
 
     @Override
     public Library read(IIdType theId) {
@@ -258,12 +248,7 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         return null;
     }
 
-    @Override
-    public IBaseResource readByPid(Long thePid) {
-        // TODO Auto-generated method stub
-        System.out.println("Search 6");
-        return null;
-    }
+    
 
     @Override
     public Library read(IIdType theId, RequestDetails theRequestDetails) {
@@ -356,12 +341,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         return null;
     }
 
-    @Override
-    public Set<Long> searchForIds(SearchParameterMap theParams, RequestDetails theRequest) {
-        // TODO Auto-generated method stub
-        System.out.println("Search 4");
-        return null;
-    }
 
     @Override
     public void translateRawParameters(Map<String, List<String>> theSource, SearchParameterMap theTarget) {
@@ -416,6 +395,18 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
 
     @Override
     public RuntimeResourceDefinition validateCriteriaAndReturnResourceDefinition(String criteria) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public IBaseResource readByPid(ResourcePersistentId thePid) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Set<ResourcePersistentId> searchForIds(SearchParameterMap theParams, RequestDetails theRequest) {
         // TODO Auto-generated method stub
         return null;
     }

@@ -1,13 +1,11 @@
 package org.opencds.cqf.common.retrieve;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -24,12 +22,12 @@ import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Procedure;
 import org.hl7.fhir.r4.model.ServiceRequest;
-import org.opencds.cqf.cql.retrieve.SearchParamFhirRetrieveProvider;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.fhir.retrieve.SearchParamFhirRetrieveProvider;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterMap;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
-import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.model.api.IQueryParameterType;
 import ca.uhn.fhir.util.BundleUtil;
 import ca.uhn.fhir.util.bundle.BundleEntryParts;

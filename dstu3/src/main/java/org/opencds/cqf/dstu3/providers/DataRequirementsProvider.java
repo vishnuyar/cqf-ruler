@@ -52,7 +52,7 @@ import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.Type;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.execution.LibraryLoader;
+import org.opencds.cqf.cql.engine.execution.LibraryLoader;
 import org.opencds.cqf.dstu3.helpers.LibraryHelper;
 import org.opencds.cqf.measure.stu3.CodeTerminologyRef;
 import org.opencds.cqf.measure.stu3.CqfMeasure;

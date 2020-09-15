@@ -1,12 +1,13 @@
 package org.opencds.cqf.r4.evaluation;
 
-import org.opencds.cqf.cql.data.CompositeDataProvider;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.model.R4FhirModelResolver;
-import org.opencds.cqf.cql.retrieve.SearchParamFhirRetrieveProvider;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
-import org.opencds.cqf.cql.terminology.fhir.R4FhirTerminologyProvider;
+import org.opencds.cqf.cql.engine.data.CompositeDataProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.common.helpers.ClientHelper;
+import org.opencds.cqf.cql.engine.fhir.model.R4FhirModelResolver;
+import org.opencds.cqf.cql.engine.fhir.retrieve.SearchParamFhirRetrieveProvider;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.fhir.terminology.R4FhirTerminologyProvider;
 import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
 import org.hl7.fhir.r4.model.Bundle;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
@@ -18,6 +19,7 @@ import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.searchparam.registry.ISearchParamRegistry;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
 
 // This class is a relatively dumb factory for data providers. It supports only
 // creating JPA providers for FHIR, and only basic auth for terminology
@@ -87,12 +89,13 @@ public class ProviderFactory implements EvaluationProviderFactory {
 
     public TerminologyProvider createTerminologyProvider(String model, String version, String url, String user,
             String pass) {
-        if (url != null && url.contains("apelon.com")) {
-            return new R4ApelonFhirTerminologyProvider(this.fhirContext).withBasicAuth(user, pass).setEndpoint(url,
-                    false);
-        } else if (url != null && !url.isEmpty()) {
-            return new R4FhirTerminologyProvider(this.fhirContext).withBasicAuth(user, pass).setEndpoint(url, false);
-        } else
-            return this.defaultTerminologyProvider;
-    }
+                if (url != null && !url.isEmpty()) {
+                    IGenericClient client = ClientHelper.getClient(FhirContext.forR4(), url, user, pass);
+                    if (url.contains("apelon.com")) {
+                        return new R4ApelonFhirTerminologyProvider(client);
+                    }
+                    return new R4FhirTerminologyProvider(client);
+                }
+                return this.defaultTerminologyProvider;
+            }
 }

@@ -14,7 +14,7 @@ import org.cqframework.cql.cql2elm.LibraryManager;
 import org.cqframework.cql.cql2elm.ModelManager;
 import org.cqframework.cql.elm.execution.Library;
 import org.cqframework.cql.elm.tracking.TrackBack;
-import org.opencds.cqf.cql.execution.CqlLibraryReader;
+import org.opencds.cqf.cql.engine.execution.CqlLibraryReader;
 
 public class TranslatorHelper {
 

@@ -30,7 +30,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.execution.LibraryLoader;
+import org.opencds.cqf.cql.engine.execution.LibraryLoader;
 import org.opencds.cqf.dstu3.evaluation.MeasureEvaluation;
 import org.opencds.cqf.dstu3.evaluation.MeasureEvaluationSeed;
 import org.opencds.cqf.dstu3.evaluation.ProviderFactory;

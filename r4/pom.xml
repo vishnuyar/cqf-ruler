@@ -19,7 +19,7 @@
         <dependency>
             <groupId>org.opencds.cqf</groupId>
             <artifactId>tooling</artifactId>
-            <version>${cqf_tooling_version}</version>
+            <version>${cqf-tooling.version}</version>
         </dependency>
         <dependency>
 		    <groupId>com.googlecode.json-simple</groupId>

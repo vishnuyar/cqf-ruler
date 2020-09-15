@@ -1,11 +1,11 @@
 package org.opencds.cqf.dstu3.evaluation;
 
-import org.opencds.cqf.cql.data.CompositeDataProvider;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.model.Dstu3FhirModelResolver;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
-import org.opencds.cqf.cql.terminology.fhir.Dstu3FhirTerminologyProvider;
+import org.opencds.cqf.cql.engine.data.CompositeDataProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.engine.model.Dstu3FhirModelResolver;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.terminology.fhir.Dstu3FhirTerminologyProvider;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.Dstu3ApelonFhirTerminologyProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;

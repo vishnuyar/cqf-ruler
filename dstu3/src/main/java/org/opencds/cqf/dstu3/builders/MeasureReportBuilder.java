@@ -5,7 +5,7 @@ import org.hl7.fhir.dstu3.model.MeasureReport;
 import org.hl7.fhir.dstu3.model.Period;
 import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.opencds.cqf.cql.runtime.Interval;
+import org.opencds.cqf.cql.engine.runtime.Interval;
 
 import java.util.Date;
 

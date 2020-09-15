@@ -11,8 +11,8 @@ import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
-import org.opencds.cqf.cql.execution.Context;
-import org.opencds.cqf.cql.runtime.DateTime;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
 
 import java.math.BigDecimal;
@@ -122,13 +122,13 @@ public class ApplyCqlOperationProvider {
                 return new DateType().setValue(Date.from(((DateTime) source).getDateTime().toInstant()));
             }
         }
-        else if (source instanceof org.opencds.cqf.cql.runtime.Date)
+        else if (source instanceof org.opencds.cqf.cql.engine.runtime.Date)
         {
             if (type.equals("dateTime")) {
-                return new DateTimeType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.runtime.Date) source).getDate()));
+                return new DateTimeType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.engine.runtime.Date) source).getDate()));
             }
             if (type.equals("date")) {
-                return new DateType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.runtime.Date) source).getDate()));
+                return new DateType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.engine.runtime.Date) source).getDate()));
             }
         }
 

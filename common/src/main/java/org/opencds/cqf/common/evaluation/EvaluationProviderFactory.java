@@ -1,8 +1,8 @@
 package org.opencds.cqf.common.evaluation;
 
 import org.hl7.fhir.r4.model.Bundle;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 
 // TODO: This interface is a partial duplicate of the provider factory interface
 // in the cql service layer. We need another round of refactoring to consolidate that.

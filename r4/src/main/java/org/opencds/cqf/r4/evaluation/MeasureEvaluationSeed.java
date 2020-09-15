@@ -9,12 +9,12 @@ import org.cqframework.cql.elm.execution.Library;
 import org.cqframework.cql.elm.execution.UsingDef;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Measure;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.execution.Context;
-import org.opencds.cqf.cql.execution.LibraryLoader;
-import org.opencds.cqf.cql.runtime.DateTime;
-import org.opencds.cqf.cql.runtime.Interval;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.common.evaluation.LibraryLoader;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+import org.opencds.cqf.cql.engine.runtime.Interval;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,5 +152,29 @@ public class MeasureEvaluationSeed {
 
     public void setValueSetsBundle(Bundle valueSetsBundle) {
         this.valueSetsBundle = valueSetsBundle;
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
+    public void setContext(Context context) {
+        this.context = context;
+    }
+
+    public Interval getMeasurementPeriod() {
+        return measurementPeriod;
+    }
+
+    public void setMeasurementPeriod(Interval measurementPeriod) {
+        this.measurementPeriod = measurementPeriod;
+    }
+
+    public DataProvider getDataProvider() {
+        return dataProvider;
+    }
+
+    public void setDataProvider(DataProvider dataProvider) {
+        this.dataProvider = dataProvider;
     }
 }

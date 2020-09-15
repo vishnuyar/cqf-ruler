@@ -9,12 +9,12 @@ import java.util.List;
 
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.opencds.cqf.cql.retrieve.SearchParamFhirRetrieveProvider;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.fhir.retrieve.SearchParamFhirRetrieveProvider;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterMap;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
-import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.CacheControlDirective;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;

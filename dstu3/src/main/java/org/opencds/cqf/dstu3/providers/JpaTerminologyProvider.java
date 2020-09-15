@@ -13,10 +13,10 @@ import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.ValueSet;
 import org.hl7.fhir.dstu3.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.opencds.cqf.cql.runtime.Code;
-import org.opencds.cqf.cql.terminology.CodeSystemInfo;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
-import org.opencds.cqf.cql.terminology.ValueSetInfo;
+import org.opencds.cqf.cql.engine.runtime.Code;
+import org.opencds.cqf.cql.engine.terminology.CodeSystemInfo;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.terminology.ValueSetInfo;
 
 import java.util.ArrayList;
 import java.util.List;

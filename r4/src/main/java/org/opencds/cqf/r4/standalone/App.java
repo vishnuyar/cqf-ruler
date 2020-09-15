@@ -14,14 +14,13 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
-import org.opencds.cqf.cql.terminology.fhir.R4FhirTerminologyProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.fhir.terminology.R4FhirTerminologyProvider;
 import org.opencds.cqf.library.r4.NarrativeProvider;
 import org.opencds.cqf.r4.evaluation.MeasureEvaluationSeed;
 import org.opencds.cqf.r4.evaluation.ProviderFactory;
@@ -46,22 +45,23 @@ public final class App {
     private App() {
     }
 
-    /**
-     * Says hello to the world.
-     * 
-     * @param args The arguments of the program.
-     * @throws FileNotFoundException
-     * @throws DataFormatException
-     * @throws JSONException
-     */
-    public static void main(String[] args) throws DataFormatException, FileNotFoundException, JSONException {
-        Parameters libParameters = getResource();
-        MeasureOperationsProvider measureProvider = getMeasureOperations();
-        String result = evaluateLibrary(libParameters, measureProvider);
-        JSONObject json = new JSONObject(result); // Convert text to object
-        System.out.println(json.toString(4)); 
-        System.exit(0); 
-        //System.out.println("The result recd is: "+result);
+    
+    public static void main(String[] args)  {
+        Parameters libParameters;
+        try {
+            libParameters = getResource();
+            MeasureOperationsProvider measureProvider = getMeasureOperations();
+            String result = evaluateLibrary(libParameters, measureProvider);
+            JSONObject json = new JSONObject(result); // Convert text to object
+            System.out.println(json.toString(4)); 
+            //System.out.println("The result recd is: "+result);
+            System.exit(0); 
+        } catch (DataFormatException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+        
 
     }
 
@@ -135,11 +135,22 @@ public final class App {
         return FhirContext.forR4().newJsonParser().encodeResourceToString(result);
     }
 
-    private static Parameters getResource() throws DataFormatException, FileNotFoundException {
+    private static Parameters getResource() {
         File parafile = new File("/Users/sreekanth/githubrepos/Libevaluate-tool/fhir.json");
         IParser parser = FhirContext.forR4().newJsonParser();
-        Parameters response = parser.parseResource(Parameters.class, new FileReader(parafile));
-        return response;
+        Parameters response;
+        try {
+            response = parser.parseResource(Parameters.class, new FileReader(parafile));
+            return response;
+        } catch (DataFormatException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+        
     }
 
     

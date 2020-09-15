@@ -12,8 +12,8 @@ import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
-import org.opencds.cqf.cql.execution.Context;
-import org.opencds.cqf.cql.runtime.DateTime;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
 import org.opencds.cqf.dstu3.evaluation.ProviderFactory;
 import org.opencds.cqf.dstu3.helpers.LibraryHelper;
 

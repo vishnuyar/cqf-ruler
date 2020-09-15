@@ -15,10 +15,10 @@ import org.cqframework.cql.elm.execution.Library;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.opencds.cqf.common.evaluation.MeasurePopulationType;
 import org.opencds.cqf.common.evaluation.MeasureScoring;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.execution.Context;
-import org.opencds.cqf.cql.runtime.Interval;
-import org.opencds.cqf.cql.runtime.Date;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.cql.engine.runtime.Interval;
+import org.opencds.cqf.cql.engine.runtime.Date;
 import org.opencds.cqf.r4.builders.MeasureReportBuilder;
 import org.opencds.cqf.r4.helpers.FhirMeasureBundler;
 import org.slf4j.Logger;
@@ -180,10 +180,10 @@ public class MeasureEvaluation {
                 } else if (cqlResult instanceof Boolean) {
                     parameters.addParameter(cqlcriteria, (Boolean) cqlResult);
 
-                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Code) {
+                } else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.Code) {
 
                     CodeType codeType = new CodeType();
-                    org.opencds.cqf.cql.runtime.Code code = (org.opencds.cqf.cql.runtime.Code) cqlResult;
+                    org.opencds.cqf.cql.engine.runtime.Code code = (org.opencds.cqf.cql.engine.runtime.Code) cqlResult;
                     codeType.setSystem(code.getSystem());
                     codeType.setValue(code.getCode());
 
@@ -193,8 +193,8 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     System.out.println("casting to Code" + code.getSystem());
                 } // parameters.addParameter(cqlcriteria, (Boolean)cqlResult);
-                else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Quantity) {
-                    org.opencds.cqf.cql.runtime.Quantity qty = (org.opencds.cqf.cql.runtime.Quantity) cqlResult;
+                else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.Quantity) {
+                    org.opencds.cqf.cql.engine.runtime.Quantity qty = (org.opencds.cqf.cql.engine.runtime.Quantity) cqlResult;
                     Quantity quantity = new Quantity();
                     quantity.setUnit(qty.getUnit());
                     quantity.setValue(qty.getValue());
@@ -227,9 +227,9 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     // System.out.println("casting to Code" + codeType.getValue());
 
-                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Date) {
+                } else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.Date) {
                     DateType date = new DateType();
-                    org.opencds.cqf.cql.runtime.Date cqlDate = (org.opencds.cqf.cql.runtime.Date) cqlResult;
+                    org.opencds.cqf.cql.engine.runtime.Date cqlDate = (org.opencds.cqf.cql.engine.runtime.Date) cqlResult;
                     date.setValueAsString(cqlDate.toString());
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
@@ -237,9 +237,9 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     // System.out.println("casting to Date" + date.asStringValue());
 
-                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.DateTime) {
+                } else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.DateTime) {
                     DateTimeType datetime = new DateTimeType();
-                    org.opencds.cqf.cql.runtime.DateTime cqlDate = (org.opencds.cqf.cql.runtime.DateTime) cqlResult;
+                    org.opencds.cqf.cql.engine.runtime.DateTime cqlDate = (org.opencds.cqf.cql.engine.runtime.DateTime) cqlResult;
                     datetime.setValueAsString(cqlDate.toString());
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
@@ -265,14 +265,14 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     // System.out.println("casting to decimal" + decimal.asStringValue());
 
-                } else if (cqlResult instanceof org.opencds.cqf.cql.runtime.Interval) {
+                } else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.Interval) {
                     Period cqlPeriod = new Period();
                     // System.out.println("received interval : " + cqlResult.toString());
 
-                    org.opencds.cqf.cql.runtime.Interval cqlInterval = (org.opencds.cqf.cql.runtime.Interval) cqlResult;
-                    org.opencds.cqf.cql.runtime.DateTime startTime = (org.opencds.cqf.cql.runtime.DateTime) cqlInterval
+                    org.opencds.cqf.cql.engine.runtime.Interval cqlInterval = (org.opencds.cqf.cql.engine.runtime.Interval) cqlResult;
+                    org.opencds.cqf.cql.engine.runtime.DateTime startTime = (org.opencds.cqf.cql.engine.runtime.DateTime) cqlInterval
                             .getStart();
-                    org.opencds.cqf.cql.runtime.DateTime endTime = (org.opencds.cqf.cql.runtime.DateTime) cqlInterval
+                    org.opencds.cqf.cql.engine.runtime.DateTime endTime = (org.opencds.cqf.cql.engine.runtime.DateTime) cqlInterval
                             .getEnd();
                     cqlPeriod.setStart(java.util.Date.from(startTime.getDateTime().toInstant()));
                     cqlPeriod.setEnd(java.util.Date.from(endTime.getDateTime().toInstant()));

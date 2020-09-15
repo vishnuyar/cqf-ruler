@@ -59,10 +59,10 @@ import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.common.retrieve.InMemoryRetrieveProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 import org.opencds.cqf.common.retrieve.RemoteRetrieveProvider;
-import org.opencds.cqf.cql.execution.Context;
-import org.opencds.cqf.cql.execution.LibraryLoader;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.common.evaluation.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
-import org.opencds.cqf.cql.data.DataProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
 import org.opencds.cqf.measure.r4.CqfMeasure;
 import org.opencds.cqf.r4.evaluation.MeasureEvaluation;
 import org.opencds.cqf.r4.evaluation.MeasureEvaluationSeed;
@@ -218,8 +218,8 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
-            @OptionalParam(name = "source") String source, @OptionalParam(name = "user") String user,
-            @OptionalParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
+            @OperationParam(name = "source") String source, @OperationParam(name = "user") String user,
+            @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
 
         this.retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
@@ -256,7 +256,7 @@ public class MeasureOperationsProvider {
         }
         seed.setRetrieverType(this.retrieverType);
         seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
-        if ((patientRef != null) && (patientRef.startsWith("Patient/"))){
+        if ((patientRef != null) && (patientRef.startsWith("Patient/"))) {
             patientRef = patientRef.replace("Patient/", "");
         }
         MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
@@ -285,44 +285,7 @@ public class MeasureOperationsProvider {
         return report;
     }
 
-    // @Operation(name = "$evaluate-measure-with-source", idempotent = true)
-    // public MeasureReport evaluateMeasure(@IdParam IdType theId,
-    // @OperationParam(name = "sourceData", min = 1, max = 1, type = Bundle.class)
-    // Bundle sourceData,
-    // @OperationParam(name = "periodStart", min = 1, max = 1) String periodStart,
-    // @OperationParam(name = "periodEnd", min = 1, max = 1) String periodEnd) {
-    // if (periodStart == null || periodEnd == null) {
-    // throw new IllegalArgumentException("periodStart and periodEnd are required
-    // for measure evaluation");
-    // }
-    // LibraryLoader libraryLoader =
-    // LibraryHelper.createLibraryLoader(this.libraryResourceProvider);
-    // MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory,
-    // libraryLoader, this.libraryResourceProvider);
-    // Measure measure = this.getDao().read(theId);
-
-    // if (measure == null) {
-    // throw new RuntimeException("Could not find Measure/" + theId.getIdPart());
-    // }
-
-    // seed.setup(measure, periodStart, periodEnd, null, null, null, null);
-    // BundleDataProviderStu3 bundleProvider = new
-    // BundleDataProviderStu3(sourceData);
-    // bundleProvider.setTerminologyProvider(provider.getTerminologyProvider());
-    // seed.getContext().registerDataProvider("http://hl7.org/fhir",
-    // bundleProvider);
-    // MeasureEvaluation evaluator = new MeasureEvaluation(bundleProvider,
-    // seed.getMeasurementPeriod());
-    // return evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(),
-    // "");
-    // }
-
-    /****
-     * 
-     * New operation being written to evaluate library with criteria
-     * 
-     */
-
+    
     @Operation(name = "$lib-evaluate", idempotent = true, type = Measure.class)
     public Parameters libraryEvaluate(@OperationParam(name = "libraryId") String libraryId,
             @OperationParam(name = "criteria") String criteria, @OperationParam(name = "subject") String patientRef,
@@ -429,7 +392,7 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
             @OperationParam(name = "status") String status) {
-        // logger.info("Caregap starting");
+
         Parameters parameters = new Parameters();
         this.retrieverType = MeasureEvaluationSeed.LOCAL_RETRIEVER;
         List<String> patients = new ArrayList<>();
@@ -441,17 +404,17 @@ public class MeasureOperationsProvider {
             throw new RuntimeException("Subject and Practitioner both cannot be null!");
         }
 
-        if (patientRef != null){
-            if(patientRef.startsWith("Patient/")){
+        if (patientRef != null) {
+            if (patientRef.startsWith("Patient/")) {
                 patientSearch = true;
-            } else if(patientRef.startsWith("Group/")){
+            } else if (patientRef.startsWith("Group/")) {
                 groupSearch = true;
             } else {
                 throw new RuntimeException("Subject should start with either Patient or Group");
             }
         }
 
-        System.out.println("Patient server url: "+patientServerUrl);
+        System.out.println("Patient server url: " + patientServerUrl);
         boolean topicgiven = false;
         boolean measuregiven = false;
         if (patientServerUrl != null) {
@@ -523,46 +486,46 @@ public class MeasureOperationsProvider {
                 measures.add(res);
             }
         }
-        
-        if (measures.size()==0){
-            throw new RuntimeException("Neither topic nor measure parameter resolves to available Measure for running care gap report");
+
+        if (measures.size() == 0) {
+            throw new RuntimeException(
+                    "Neither topic nor measure parameter resolves to available Measure for running care gap report");
         }
-        
+
         LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider);
-                seed.setRetrieverType(this.retrieverType);
-                //Hack solution for getting Provider -- Needed for getting patients data
-                seed.setup(measures.get(0), periodStart, periodEnd, null, null, null, null);
+        seed.setRetrieverType(this.retrieverType);
+        // Hack solution for getting Provider -- Needed for getting patients data
+        seed.setup(measures.get(0), periodStart, periodEnd, null, null, null, null);
         if (practitionerRef != null) {
-            List<String> practitionerPatients = getPractitionerPatients(practitionerRef,seed.getDataProvider());
+            List<String> practitionerPatients = getPractitionerPatients(practitionerRef, seed.getDataProvider());
             patients.addAll(practitionerPatients);
         }
         if (patientRef != null) {
-            if (patientSearch){
-                patients.addAll(getPatients(patientRef,seed.getDataProvider()));
+            if (patientSearch) {
+                patients.addAll(getPatients(patientRef, seed.getDataProvider()));
             }
-            if (groupSearch){
-                patients.addAll(getGroupPatients(patientRef,seed.getDataProvider()));
+            if (groupSearch) {
+                patients.addAll(getGroupPatients(patientRef, seed.getDataProvider()));
             }
-            
+
         }
-        
-        if (patients.size()>1){
-            for (String patient:patients) {
+
+        if (patients.size() > 1) {
+            for (String patient : patients) {
                 Bundle careGapBundle = getCareGapReport(patient, measures, status, periodStart, periodEnd, seed);
-                parameters.addParameter(new Parameters.ParametersParameterComponent()
-                        .setName("return").setResource(careGapBundle));
-    
+                parameters.addParameter(
+                        new Parameters.ParametersParameterComponent().setName("return").setResource(careGapBundle));
+
             }
             return parameters;
-        } else if(patients.size()==1) {
+        } else if (patients.size() == 1) {
             return getCareGapReport(patients.get(0), measures, status, periodStart, periodEnd, seed);
-            
+
         } else {
             throw new RuntimeException("Subject not found for running care gap report");
         }
-        
 
     }
 
@@ -577,14 +540,14 @@ public class MeasureOperationsProvider {
             patientRef = patientRef.replace("Patient/", "");
         }
         CodeableConcept typeCode = new CodeableConcept();
-        typeCode.addCoding(new Coding()
-        .setCode("gaps-doc")
-        .setSystem("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-doc-type")
-        .setDisplay("Gaps in Care Report"));
-        
+        typeCode.addCoding(new Coding().setCode("gaps-doc")
+                .setSystem("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-doc-type")
+                .setDisplay("Gaps in Care Report"));
+
         composition.setStatus(Composition.CompositionStatus.FINAL).setType(typeCode);
 
-        composition.setSubject(new Reference("Patient/"+patientRef)).setTitle("Care Gap Report for Patient:" + patientRef);
+        composition.setSubject(new Reference("Patient/" + patientRef))
+                .setTitle("Care Gap Report for Patient:" + patientRef);
         List<MeasureReport> reports = new ArrayList<>();
         List<DetectedIssue> detectedIssues = new ArrayList<DetectedIssue>();
         MeasureReport report = new MeasureReport();
@@ -593,7 +556,6 @@ public class MeasureOperationsProvider {
             if (measure.hasTitle()) {
                 section.setTitle(measure.getTitle());
             }
-            
 
             seed.setup(measure, periodStart, periodEnd, null, null, null, null);
             MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
@@ -601,50 +563,49 @@ public class MeasureOperationsProvider {
             report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
             report.setId(UUID.randomUUID().toString());
             report.setDate(new Date());
-            report.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm"));
+            report.setMeta(new Meta()
+                    .addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm"));
             section.setFocus(new Reference("MeasureReport/" + report.getId()));
-            //Check for detected issue
-            DetectedIssue detected = checkDetectedIssue(report,patientRef);
-            if (detected != null){
+            // Check for detected issue
+            DetectedIssue detected = checkDetectedIssue(report, patientRef);
+            if (detected != null) {
                 detectedIssues.add(detected);
                 section.addEntry(new Reference("DetectedIssue/" + detected.getIdElement().getIdPart()));
             }
             reports.add(report);
             composition.addSection(section);
         }
-        
 
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
         // Add the reports based on status parameter
         boolean addreport;
         for (MeasureReport rep : reports) {
-            if (getMeasureScore(rep) != null){
+            if (getMeasureScore(rep) != null) {
                 boolean openGap = checkOpenGap(rep);
-            if(status == null || status == ""){
-                addreport = true;
-            } else if (status.equals("open-gap") && openGap){
-                addreport = true;
-            } else if (status.equals("closed-gap") && !openGap){
-                addreport = true;
-            } else {
-                addreport = false;
-            }
-            if (addreport) {
-                Parameters parameters = addEvaluatedResources(rep);
-                careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
-                for (DetectedIssue detectedIssue : detectedIssues) {
-                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
+                if (status == null || status == "") {
+                    addreport = true;
+                } else if (status.equals("open-gap") && openGap) {
+                    addreport = true;
+                } else if (status.equals("closed-gap") && !openGap) {
+                    addreport = true;
+                } else {
+                    addreport = false;
                 }
-                for ( Parameters.ParametersParameterComponent parameter:parameters.getParameter()){
-                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(parameter.getResource()));
-                } 
-                
+                if (addreport) {
+                    Parameters parameters = addEvaluatedResources(rep);
+                    careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
+                    for (DetectedIssue detectedIssue : detectedIssues) {
+                        careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
+                    }
+                    for (Parameters.ParametersParameterComponent parameter : parameters.getParameter()) {
+                        careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(parameter.getResource()));
+                    }
+
+                }
             }
+
         }
-            
-            
-        }
-        
+
         return careGapReport;
 
     }
@@ -654,10 +615,10 @@ public class MeasureOperationsProvider {
         if (rep.hasContained()) {
             for (Resource contained : rep.getContained()) {
                 if (contained instanceof Bundle) {
-                    addEvaluatedResourcesToParameters((Bundle) contained, parameters,null);
+                    addEvaluatedResourcesToParameters((Bundle) contained, parameters, null);
                     List<Reference> listRef = populateListReferences((Bundle) contained);
                     rep.setEvaluatedResource(listRef);
-                    
+
                 }
             }
         }
@@ -671,12 +632,14 @@ public class MeasureOperationsProvider {
                 if ((entry.getResource() instanceof ListResource)) {
                     ListResource listResource = (ListResource) entry.getResource();
                     String popType = listResource.getTitle();
-                    String displayPop = WordUtils.capitalize(popType.replace("-"," "));
-                    for( ListEntryComponent listComponent: listResource.getEntry()){
+                    String displayPop = WordUtils.capitalize(popType.replace("-", " "));
+                    for (ListEntryComponent listComponent : listResource.getEntry()) {
                         List<Extension> evalResourceExt = new ArrayList<>();
-                        evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
-                        new CodeableConcept()
-                                .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", popType, displayPop))));
+                        evalResourceExt.add(new Extension(
+                                "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
+                                new CodeableConcept()
+                                        .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population",
+                                                popType, displayPop))));
                         Reference evaluateRef = listComponent.getItem();
                         evaluateRef.setExtension(evalResourceExt);
                         listRef.add(evaluateRef);
@@ -684,14 +647,14 @@ public class MeasureOperationsProvider {
                 }
             }
         }
-        return listRef;    
+        return listRef;
     }
 
     private DetectedIssue checkDetectedIssue(MeasureReport report, String patientRef) {
         boolean isOpenGap = checkOpenGap(report);
-        
+
         if (isOpenGap) {
-            return createDetectedIssue(report,patientRef);
+            return createDetectedIssue(report, patientRef);
         } else {
             return null;
         }
@@ -701,15 +664,14 @@ public class MeasureOperationsProvider {
         boolean openGap = false;
         String improvementNotation = report.getImprovementNotation().getCodingFirstRep().getCode().toLowerCase();
         BigDecimal measureScore = getMeasureScore(report);
-        if (measureScore != null){
-            if (((improvementNotation.equals("increase")) && (measureScore.compareTo(new BigDecimal(0))) <= 0)){
+        if (measureScore != null) {
+            if (((improvementNotation.equals("increase")) && (measureScore.compareTo(new BigDecimal(0))) <= 0)) {
                 openGap = true;
-            } else if (((improvementNotation.equals("decrease")) && (measureScore.compareTo(new BigDecimal(1))) >= 0)){
+            } else if (((improvementNotation.equals("decrease")) && (measureScore.compareTo(new BigDecimal(1))) >= 0)) {
                 openGap = true;
             }
         }
-        
-        
+
         return openGap;
     }
 
@@ -717,13 +679,12 @@ public class MeasureOperationsProvider {
         DetectedIssue detectedIssue = new DetectedIssue();
         detectedIssue.setId(UUID.randomUUID().toString());
         detectedIssue.setStatus(DetectedIssue.DetectedIssueStatus.FINAL);
-        detectedIssue.setPatient(new Reference("Patient/"+patientRef));
-        detectedIssue.getEvidence().add(new DetectedIssue.DetectedIssueEvidenceComponent().addDetail(new Reference("MeasureReport/" + report.getId())));
-        CodeableConcept code = new CodeableConcept()
-            .addCoding(new Coding()
-            .setSystem("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/detectedissue-category")
-            .setCode("care-gap")
-            .setDisplay("Gap in Care Detected"));
+        detectedIssue.setPatient(new Reference("Patient/" + patientRef));
+        detectedIssue.getEvidence().add(new DetectedIssue.DetectedIssueEvidenceComponent()
+                .addDetail(new Reference("MeasureReport/" + report.getId())));
+        CodeableConcept code = new CodeableConcept().addCoding(
+                new Coding().setSystem("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/detectedissue-category")
+                        .setCode("care-gap").setDisplay("Gap in Care Detected"));
         detectedIssue.setCode(code);
         return detectedIssue;
     }
@@ -743,26 +704,26 @@ public class MeasureOperationsProvider {
             groupRef = groupRef.replace("Group/", "");
         }
         List<String> patients = new ArrayList<>();
-        System.out.println("Search for patients in the group: "+groupRef);
+        System.out.println("Search for patients in the group: " + groupRef);
         Iterable<Object> groupRetrieve = provider.retrieve("Group", "id", groupRef, "Group", null, null, null, null,
                 null, null, null, null);
 
         for (Iterator iterator = groupRetrieve.iterator(); iterator.hasNext();) {
             Group group = (Group) iterator.next();
-            if (group.getIdElement().getIdPart().equals(groupRef)){
+            if (group.getIdElement().getIdPart().equals(groupRef)) {
                 List<GroupMemberComponent> memberList = group.getMember();
-                for (GroupMemberComponent member: memberList){
+                for (GroupMemberComponent member : memberList) {
                     patients.add(member.getEntity().getReference());
                 }
             }
-            
+
         }
         // logger.info("patients available!!" + patients.size());
 
         return patients;
     }
 
-    private List<String> getPractitionerPatients(String practitionerRef,DataProvider provider) {
+    private List<String> getPractitionerPatients(String practitionerRef, DataProvider provider) {
         SearchParameterMap map = new SearchParameterMap();
         map.add("general-practitioner", new ReferenceParam(
                 practitionerRef.startsWith("Practitioner/") ? practitionerRef : "Practitioner/" + practitionerRef));
@@ -774,13 +735,13 @@ public class MeasureOperationsProvider {
         return patients;
     }
 
-    private List<String> getPatients(String patientRef,DataProvider provider) {
+    private List<String> getPatients(String patientRef, DataProvider provider) {
         if (patientRef.startsWith("Patient/")) {
             patientRef = patientRef.replace("Patient/", "");
         }
         List<String> patients = new ArrayList<>();
-        Iterable<Object> patientRetrieve = provider.retrieve("Patient", "id", patientRef, "Patient", null, null, null, null,
-                null, null, null, null);
+        Iterable<Object> patientRetrieve = provider.retrieve("Patient", "id", patientRef, "Patient", null, null, null,
+                null, null, null, null, null);
 
         for (Iterator iterator = patientRetrieve.iterator(); iterator.hasNext();) {
             Patient patient = (Patient) iterator.next();
@@ -798,7 +759,7 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
-            @OptionalParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException {
+            @OperationParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException {
         // TODO: Spec says that the periods are not required, but I am not sure what to
         // do when they aren't supplied so I made them required
         MeasureReport report = evaluateMeasure(theId, periodStart, periodEnd, null, null, patientRef, null,
@@ -895,8 +856,8 @@ public class MeasureOperationsProvider {
     // TODO - this needs a lot of work
     @Operation(name = "$data-requirements", idempotent = true, type = Measure.class)
     public org.hl7.fhir.r4.model.Library dataRequirements(@IdParam IdType theId,
-            @RequiredParam(name = "startPeriod") String startPeriod,
-            @RequiredParam(name = "endPeriod") String endPeriod) throws InternalErrorException, FHIRException {
+            @OperationParam(name = "startPeriod") String startPeriod,
+            @OperationParam(name = "endPeriod") String endPeriod) throws InternalErrorException, FHIRException {
 
         Measure measure = this.measureResourceProvider.getDao().read(theId);
         return this.dataRequirementsProvider.getDataRequirements(measure, this.libraryResolutionProvider);

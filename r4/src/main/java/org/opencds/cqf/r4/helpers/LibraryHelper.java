@@ -38,7 +38,7 @@ public class LibraryHelper {
     }
 
 
-    public static List<org.cqframework.cql.elm.execution.Library> loadLibraries(Measure measure, org.opencds.cqf.cql.execution.LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
+    public static List<org.cqframework.cql.elm.execution.Library> loadLibraries(Measure measure, org.opencds.cqf.cql.engine.execution.LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
     {
         List<org.cqframework.cql.elm.execution.Library> libraries = new ArrayList<org.cqframework.cql.elm.execution.Library>();
 
@@ -83,7 +83,7 @@ public class LibraryHelper {
         return libraries;
     }
 
-    public static Library resolveLibraryById(String libraryId, org.opencds.cqf.cql.execution.LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
+    public static Library resolveLibraryById(String libraryId, org.opencds.cqf.common.evaluation.LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
     {
         // Library library = null;
 
@@ -105,7 +105,7 @@ public class LibraryHelper {
         // return library;
     }
 
-    public static Library resolvePrimaryLibrary(Measure measure, org.opencds.cqf.cql.execution.LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
+    public static Library resolvePrimaryLibrary(Measure measure, LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
     {
         // default is the first library reference
         String id = CanonicalHelper.getId(measure.getLibrary().get(0));
@@ -120,7 +120,7 @@ public class LibraryHelper {
         return library;
     }
 
-    public static Library resolvePrimaryLibrary(PlanDefinition planDefinition, org.opencds.cqf.cql.execution.LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider) {
+    public static Library resolvePrimaryLibrary(PlanDefinition planDefinition, LibraryLoader libraryLoader, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider) {
         String id = CanonicalHelper.getId(planDefinition.getLibrary().get(0));
 
         Library library = resolveLibraryById(id, libraryLoader, libraryResourceProvider);

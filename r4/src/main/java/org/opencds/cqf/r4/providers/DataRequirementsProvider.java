@@ -56,7 +56,7 @@ import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.StringType;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.execution.LibraryLoader;
+import org.opencds.cqf.cql.engine.execution.LibraryLoader;
 import org.opencds.cqf.measure.r4.CqfMeasure;
 import org.opencds.cqf.measure.r4.CodeTerminologyRef;
 import org.opencds.cqf.measure.r4.VersionedTerminologyRef;
