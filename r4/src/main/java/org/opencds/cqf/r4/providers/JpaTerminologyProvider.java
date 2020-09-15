@@ -52,38 +52,42 @@ public class JpaTerminologyProvider implements TerminologyProvider {
     public synchronized Iterable<Code> expand(ValueSetInfo valueSet) throws ResourceNotFoundException {
         List<Code> codes = new ArrayList<>();
         boolean needsExpand = false;
-        ValueSet vs;
-        if (valueSet.getId().startsWith("http://") || valueSet.getId().startsWith("https://")) {
+        ValueSet vs = null;
+        List<IBaseResource> valueSets = new ArrayList<>();
+        System.out.println("Looking for valueset: "+valueSet.getId());
+        if(valueSetsBundle.getEntry().size()>1){
+            for (Bundle.BundleEntryComponent entry : valueSetsBundle.getEntry()) {
+                if (entry.getResource().getResourceType().toString().equals("ValueSet")){
+                    if (entry.getResource().getIdElement().getIdPart().equals(valueSet.getId())) {
+                        valueSets.add(entry.getResource());
+                    }
+
+                }
+            }
+
+        }
+        else if (valueSet.getId().startsWith("http://") || valueSet.getId().startsWith("https://")) {
             if (valueSet.getVersion() != null || (valueSet.getCodeSystems() != null && valueSet.getCodeSystems().size() > 0)) {
                 if (!(valueSet.getCodeSystems().size() == 1 && valueSet.getCodeSystems().get(0).getVersion() == null)) {
                     throw new UnsupportedOperationException(String.format("Could not expand value set %s; version and code system bindings are not supported at this time.", valueSet.getId()));
                 }
             }
             IBundleProvider bundleProvider = valueSetResourceProvider.getDao().search(new SearchParameterMap().add(ValueSet.SP_URL, new UriParam(valueSet.getId())));
-            List<IBaseResource> valueSets = bundleProvider.getResources(0, bundleProvider.size());
-            if (valueSets.isEmpty()) {
-                valueSets = new ArrayList<>();
-                for (Bundle.BundleEntryComponent entry : valueSetsBundle.getEntry()) {
-                    if (entry.getResource().getResourceType().toString().equals("ValueSet")){
-                        if (entry.getResource().getIdElement().getIdPart().equals(valueSet.getId())) {
-                            valueSets.add(entry.getResource());
-                        }
-
-                    }
-                }
-            }
-            if (valueSets.isEmpty()) {
-                throw new IllegalArgumentException(String.format("Could not resolve value set %s.", valueSet.getId()));
-            }
-            else if (valueSets.size() == 1) {
-                vs = (ValueSet) valueSets.get(0);
-            }
-            else {
-                throw new IllegalArgumentException("Found more than 1 ValueSet with url: " + valueSet.getId());
-            }
+            valueSets = bundleProvider.getResources(0, bundleProvider.size());
+            
         }
         else {
             vs = valueSetResourceProvider.getDao().read(new IdType(valueSet.getId()));
+        }
+        
+        if (valueSets.size() == 1) {
+            vs = (ValueSet) valueSets.get(0);
+        } 
+        if (valueSets.isEmpty() && vs == null) {
+            throw new IllegalArgumentException(String.format("Could not resolve value set %s.", valueSet.getId()));
+        }
+        else if(valueSets.size()>1){
+            throw new IllegalArgumentException("Found more than 1 ValueSet with url: " + valueSet.getId());
         }
         if (vs != null) {
             if (vs.hasCompose()) {
