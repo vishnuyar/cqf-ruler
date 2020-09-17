@@ -10,6 +10,7 @@ import java.util.Set;
 import javax.servlet.http.HttpServletResponse;
 
 import org.hl7.fhir.instance.model.api.IBaseMetaType;
+import org.hl7.fhir.instance.model.api.IBaseParameters;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.Bundle;
@@ -300,19 +301,7 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         return null;
     }
 
-    @Override
-    public DaoMethodOutcome patch(IIdType theId, String theConditionalUrl, PatchTypeEnum thePatchType,
-            String thePatchBody, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public IBaseResource readByPid(ResourcePersistentId thePid) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
+    
     @Override
     public IBundleProvider search(SearchParameterMap theParams, RequestDetails theRequestDetails) {
         // TODO Auto-generated method stub
@@ -388,6 +377,21 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         // TODO Auto-generated method stub
         return null;
     }
+
+	@Override
+	public DaoMethodOutcome patch(IIdType arg0, String arg1, PatchTypeEnum arg2, String arg3, IBaseParameters arg4,
+			RequestDetails arg5) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Library readByPid(ResourcePersistentId arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	
 
     
 }
