@@ -49,10 +49,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.jpa.dao.DaoConfig;
-import ca.uhn.fhir.jpa.dao.DaoRegistry;
-import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
-import ca.uhn.fhir.jpa.dao.IFhirSystemDao;
+import ca.uhn.fhir.jpa.api.config.DaoConfig;
+import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDaoPatient;
+import ca.uhn.fhir.jpa.api.dao.IFhirSystemDao;
+import ca.uhn.fhir.jpa.api.rp.ResourceProviderFactory;
 import ca.uhn.fhir.jpa.provider.BaseJpaResourceProvider;
 import ca.uhn.fhir.jpa.provider.TerminologyUploaderProvider;
 import ca.uhn.fhir.jpa.provider.r4.JpaConformanceProviderR4;
@@ -61,9 +63,8 @@ import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
 import ca.uhn.fhir.jpa.search.DatabaseBackedPagingProvider;
-
+import ca.uhn.fhir.jpa.searchparam.registry.SearchParamRegistryImpl;
 import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
-import ca.uhn.fhir.jpa.util.ResourceProviderFactory;
 import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.server.HardcodedServerAddressStrategy;
@@ -84,17 +85,15 @@ public class BaseServlet extends RestfulServer {
         // System level providers
         appCtx = (ApplicationContext) getServletContext()
                 .getAttribute("org.springframework.web.context.WebApplicationContext.ROOT");
-        
 
         // Fhir Context
         this.fhirContext = appCtx.getBean(FhirContext.class);
-		this.fhirContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
-		this.fhirContext.registerCustomType(VersionedTerminologyRef.class);
-		this.fhirContext.registerCustomType(CodeTerminologyRef.class);
-		this.fhirContext.registerCustomType(PopulationCriteriaMap.class);
-		this.fhirContext.registerCustomType(CqfMeasure.class);
+        this.fhirContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+        this.fhirContext.registerCustomType(VersionedTerminologyRef.class);
+        this.fhirContext.registerCustomType(CodeTerminologyRef.class);
+        this.fhirContext.registerCustomType(PopulationCriteriaMap.class);
+        this.fhirContext.registerCustomType(CqfMeasure.class);
         setFhirContext(this.fhirContext);
-
 
         // System and Resource Daos
         IFhirSystemDao<Bundle, Meta> systemDao = appCtx.getBean("mySystemDaoR4", IFhirSystemDao.class);
@@ -104,16 +103,20 @@ public class BaseServlet extends RestfulServer {
         Object systemProvider = appCtx.getBean("mySystemProviderR4", JpaSystemProviderR4.class);
         registerProvider(systemProvider);
 
-
-        ResourceProviderFactory resourceProviders = appCtx.getBean("myResourceProvidersR4", ResourceProviderFactory.class);
+        ResourceProviderFactory resourceProviders = appCtx.getBean("myResourceProvidersR4",
+                ResourceProviderFactory.class);
         registerProviders(resourceProviders.createProviders());
 
-        JpaConformanceProviderR4 confProvider = new JpaConformanceProviderR4(this, systemDao, appCtx.getBean(DaoConfig.class));
+        JpaConformanceProviderR4 confProvider = new JpaConformanceProviderR4(this, systemDao,
+                appCtx.getBean(DaoConfig.class), new SearchParamRegistryImpl());
         confProvider.setImplementationDescription("CQF Ruler FHIR R4 Server");
         setServerConformanceProvider(confProvider);
 
-        JpaTerminologyProvider localSystemTerminologyProvider = new JpaTerminologyProvider(appCtx.getBean("terminologyService",  ITermReadSvcR4.class), getFhirContext(), (ValueSetResourceProvider)this.getResourceProvider(ValueSet.class));
-        EvaluationProviderFactory providerFactory = new ProviderFactory(this.fhirContext, this.registry, localSystemTerminologyProvider);
+        JpaTerminologyProvider localSystemTerminologyProvider = new JpaTerminologyProvider(
+                appCtx.getBean("terminologyService", ITermReadSvcR4.class), getFhirContext(),
+                (ValueSetResourceProvider) this.getResourceProvider(ValueSet.class));
+        EvaluationProviderFactory providerFactory = new ProviderFactory(this.fhirContext, this.registry,
+                localSystemTerminologyProvider);
 
         resolveProviders(providerFactory, localSystemTerminologyProvider, this.registry);
 
@@ -141,37 +144,36 @@ public class BaseServlet extends RestfulServer {
         setDefaultResponseEncoding(HapiProperties.getDefaultEncoding());
 
         /*
-         * This configures the server to page search results to and from
-         * the database, instead of only paging them to memory. This may mean
-         * a performance hit when performing searches that return lots of results,
-         * but makes the server much more scalable.
+         * This configures the server to page search results to and from the database,
+         * instead of only paging them to memory. This may mean a performance hit when
+         * performing searches that return lots of results, but makes the server much
+         * more scalable.
          */
         setPagingProvider(appCtx.getBean(DatabaseBackedPagingProvider.class));
 
         /*
-         * This interceptor formats the output using nice colourful
-         * HTML output when the request is detected to come from a
-         * browser.
+         * This interceptor formats the output using nice colourful HTML output when the
+         * request is detected to come from a browser.
          */
-        ResponseHighlighterInterceptor responseHighlighterInterceptor = appCtx.getBean(ResponseHighlighterInterceptor.class);
+        ResponseHighlighterInterceptor responseHighlighterInterceptor = appCtx
+                .getBean(ResponseHighlighterInterceptor.class);
         this.registerInterceptor(responseHighlighterInterceptor);
 
         /*
          * If you are hosting this server at a specific DNS name, the server will try to
          * figure out the FHIR base URL based on what the web container tells it, but
-         * this doesn't always work. If you are setting links in your search bundles that
-         * just refer to "localhost", you might want to use a server address strategy:
+         * this doesn't always work. If you are setting links in your search bundles
+         * that just refer to "localhost", you might want to use a server address
+         * strategy:
          */
         String serverAddress = HapiProperties.getServerAddress();
-        if (serverAddress != null && serverAddress.length() > 0)
-        {
+        if (serverAddress != null && serverAddress.length() > 0) {
             setServerAddressStrategy(new HardcodedServerAddressStrategy(serverAddress));
         }
 
         registerProvider(appCtx.getBean(TerminologyUploaderProvider.class));
 
-        if (HapiProperties.getCorsEnabled())
-        {
+        if (HapiProperties.getCorsEnabled()) {
             CorsConfiguration config = new CorsConfiguration();
             config.addAllowedHeader("x-fhir-starter");
             config.addAllowedHeader("Origin");
@@ -195,30 +197,31 @@ public class BaseServlet extends RestfulServer {
         }
     }
 
-	protected NarrativeProvider getNarrativeProvider() {
-		return new NarrativeProvider();
-	}
+    protected NarrativeProvider getNarrativeProvider() {
+        return new NarrativeProvider();
+    }
 
-    // Since resource provider resolution not lazy, the providers here must be resolved in the correct
+    // Since resource provider resolution not lazy, the providers here must be
+    // resolved in the correct
     // order of dependencies.
-    private void resolveProviders(EvaluationProviderFactory providerFactory, JpaTerminologyProvider localSystemTerminologyProvider, DaoRegistry registry)
-            throws ServletException
-    {
+    private void resolveProviders(EvaluationProviderFactory providerFactory,
+            JpaTerminologyProvider localSystemTerminologyProvider, DaoRegistry registry) throws ServletException {
         NarrativeProvider narrativeProvider = this.getNarrativeProvider();
         HQMFProvider hqmfProvider = new HQMFProvider();
 
         // Code System Update
-        CodeSystemUpdateProvider csUpdate = new CodeSystemUpdateProvider(
-            this.getDao(ValueSet.class),
-            this.getDao(CodeSystem.class));
+        CodeSystemUpdateProvider csUpdate = new CodeSystemUpdateProvider(this.getDao(ValueSet.class),
+                this.getDao(CodeSystem.class));
         this.registerProvider(csUpdate);
 
         // Cache Value Sets
-        CacheValueSetsProvider cvs = new CacheValueSetsProvider(this.registry.getSystemDao(), this.getDao(Endpoint.class));
+        CacheValueSetsProvider cvs = new CacheValueSetsProvider(this.registry.getSystemDao(),
+                this.getDao(Endpoint.class));
         this.registerProvider(cvs);
 
-        //Library processing
-        LibraryOperationsProvider libraryProvider = new LibraryOperationsProvider((LibraryResourceProvider)this.getResourceProvider(Library.class), narrativeProvider);
+        // Library processing
+        LibraryOperationsProvider libraryProvider = new LibraryOperationsProvider(
+                (LibraryResourceProvider) this.getResourceProvider(Library.class), narrativeProvider);
         this.registerProvider(libraryProvider);
 
         // CQL Execution
@@ -226,16 +229,21 @@ public class BaseServlet extends RestfulServer {
         this.registerProvider(cql);
 
         // Bundle processing
-        ApplyCqlOperationProvider bundleProvider = new ApplyCqlOperationProvider(providerFactory, this.getDao(Bundle.class));
+        ApplyCqlOperationProvider bundleProvider = new ApplyCqlOperationProvider(providerFactory,
+                this.getDao(Bundle.class));
         this.registerProvider(bundleProvider);
 
         // Measure processing
-        MeasureOperationsProvider measureProvider = new MeasureOperationsProvider(this.registry, providerFactory, narrativeProvider, hqmfProvider, 
-        (LibraryResourceProvider)this.getResourceProvider(Library.class), (MeasureResourceProvider)this.getResourceProvider(Measure.class));
+        MeasureOperationsProvider measureProvider = new MeasureOperationsProvider(this.registry, providerFactory,
+                narrativeProvider, hqmfProvider, (LibraryResourceProvider) this.getResourceProvider(Library.class),
+                (MeasureResourceProvider) this.getResourceProvider(Measure.class));
         this.registerProvider(measureProvider);
-        
-        IFhirResourceDao<Patient> patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
-        IFhirResourceDao<Coverage> coverageDao  = (IFhirResourceDao<Coverage>) appCtx.getBean("myCoverageDaoR4", IFhirResourceDao.class);
+
+        IFhirResourceDao<Patient> patientDao = (IFhirResourceDao<Patient>) appCtx
+                .getBean("myPatientDaoR4",
+                        IFhirResourceDaoPatient.class);
+        IFhirResourceDao<Coverage> coverageDao  = (IFhirResourceDao<Coverage>) appCtx
+                .getBean("myCoverageDaoR4", ca.uhn.fhir.jpa.api.dao.IFhirResourceDao.class);
 
         PatientProvider patientRp = new PatientProvider(this.registry.getSystemDao(),coverageDao);
         patientRp.setDao(patientDao);

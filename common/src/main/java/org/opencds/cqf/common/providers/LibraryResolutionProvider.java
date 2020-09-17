@@ -4,7 +4,8 @@ import java.util.function.Function;
 
 import org.hl7.fhir.r4.model.Library;
 
-import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+
 
 public interface LibraryResolutionProvider<LibraryType> {
     

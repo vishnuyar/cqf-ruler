@@ -1,13 +1,14 @@
 package org.opencds.cqf.r4.providers;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.support.ValueSetExpansionOptions;
 import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
-import ca.uhn.fhir.jpa.term.VersionIndependentConcept;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.UriParam;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.util.VersionIndependentConcept;
 
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
@@ -119,7 +120,7 @@ public class JpaTerminologyProvider implements TerminologyProvider {
             
         }
 
-        List<VersionIndependentConcept> expansion = terminologySvcR4.expandValueSet(valueSet.getId());
+        List<VersionIndependentConcept> expansion = terminologySvcR4.expandValueSet(new ValueSetExpansionOptions(),   valueSet.getId());
         for (VersionIndependentConcept concept : expansion) {
             codes.add(new Code().withCode(concept.getCode()).withSystem(concept.getSystem()));
         }
@@ -129,7 +130,7 @@ public class JpaTerminologyProvider implements TerminologyProvider {
 
     @Override
     public synchronized Code lookup(Code code, CodeSystemInfo codeSystem) throws ResourceNotFoundException {
-        CodeSystem cs = terminologySvcR4.fetchCodeSystem(context, codeSystem.getId());
+        CodeSystem cs = (CodeSystem) terminologySvcR4.fetchCodeSystem(codeSystem.getId());
         for (CodeSystem.ConceptDefinitionComponent concept : cs.getConcept()) {
             if (concept.getCode().equals(code.getCode()))
                 return code.withSystem(codeSystem.getId()).withDisplay(concept.getDisplay());

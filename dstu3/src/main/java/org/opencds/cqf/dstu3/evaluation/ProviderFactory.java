@@ -11,7 +11,7 @@ import org.opencds.cqf.common.providers.Dstu3ApelonFhirTerminologyProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.jpa.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.searchparam.registry.ISearchParamRegistry;
 
 // This class is a relatively dumb factory for data providers. It supports only

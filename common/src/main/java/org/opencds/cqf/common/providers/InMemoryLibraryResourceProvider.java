@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import org.hl7.fhir.r4.model.Library;
 
-import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 
 import java.util.Collection;
 

@@ -6,7 +6,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -14,27 +13,22 @@ import org.hl7.fhir.instance.model.api.IBaseMetaType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Library;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import ca.uhn.fhir.jpa.dao.DaoMethodOutcome;
-import ca.uhn.fhir.jpa.dao.DeleteMethodOutcome;
-import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
-import ca.uhn.fhir.jpa.dao.ISearchBuilder;
-import ca.uhn.fhir.jpa.delete.DeleteConflictList;
-import ca.uhn.fhir.jpa.model.cross.ResourcePersistentId;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.api.model.DaoMethodOutcome;
+import ca.uhn.fhir.jpa.api.model.DeleteConflictList;
+import ca.uhn.fhir.jpa.api.model.DeleteMethodOutcome;
+import ca.uhn.fhir.jpa.api.model.ExpungeOptions;
+import ca.uhn.fhir.jpa.api.model.ExpungeOutcome;
 import ca.uhn.fhir.jpa.model.entity.BaseHasResource;
 import ca.uhn.fhir.jpa.model.entity.IBaseResourceEntity;
 import ca.uhn.fhir.jpa.model.entity.ResourceTable;
 import ca.uhn.fhir.jpa.model.entity.ResourceTag;
 import ca.uhn.fhir.jpa.model.entity.TagTypeEnum;
-import ca.uhn.fhir.jpa.search.PersistedJpaBundleProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
-import ca.uhn.fhir.jpa.searchparam.registry.ISearchParamRegistry;
-import ca.uhn.fhir.jpa.util.ExpungeOptions;
-import ca.uhn.fhir.jpa.util.ExpungeOutcome;
 import ca.uhn.fhir.model.api.IQueryParameterType;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.MethodOutcome;
@@ -42,6 +36,8 @@ import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.ValidationModeEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.api.server.storage.ResourcePersistentId;
+import ca.uhn.fhir.rest.api.server.storage.TransactionDetails;
 import ca.uhn.fhir.rest.server.SimpleBundleProvider;
 
 public class LibraryBundleDao implements IFhirResourceDao<Library> {
@@ -59,12 +55,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     }
 
     @Override
-    public void injectDependenciesIntoBundleProvider(PersistedJpaBundleProvider theProvider) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
     public IBaseResource toResource(BaseHasResource theEntity, boolean theForHistoryOperation) {
         // TODO Auto-generated method stub
         return null;
@@ -78,79 +68,10 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     }
 
     @Override
-    public ISearchParamRegistry getSearchParamRegistry() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
     public void addTag(IIdType theId, TagTypeEnum theTagType, String theScheme, String theTerm, String theLabel,
             RequestDetails theRequest) {
         // TODO Auto-generated method stub
 
-    }
-
-    @Override
-    public DaoMethodOutcome create(Library theResource) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome create(Library theResource, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome create(Library theResource, String theIfNoneExist) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome create(Library theResource, String theIfNoneExist, boolean thePerformIndexing,
-            Date theUpdateTimestamp, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome create(Library theResource, String theIfNoneExist, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome delete(IIdType theResource) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome delete(IIdType theResource, DeleteConflictList theDeleteConflictsListToPopulate,
-            RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DaoMethodOutcome delete(IIdType theResource, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DeleteMethodOutcome deleteByUrl(String theUrl, DeleteConflictList theDeleteConflictsListToPopulate,
-            RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public DeleteMethodOutcome deleteByUrl(String theString, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     @Override
@@ -218,14 +139,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     }
 
     @Override
-    public DaoMethodOutcome patch(IIdType theId, String theConditionalUrl, PatchTypeEnum thePatchType,
-            String thePatchBody, RequestDetails theRequestDetails) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-
-    @Override
     public Library read(IIdType theId) {
         for (Bundle.BundleEntryComponent entry : this.libBundle.getEntry()) {
             if (entry.getResource().getResourceType().toString().equals("Library")) {
@@ -247,8 +160,6 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         }
         return null;
     }
-
-    
 
     @Override
     public Library read(IIdType theId, RequestDetails theRequestDetails) {
@@ -327,9 +238,84 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     }
 
     @Override
+    public DaoMethodOutcome create(Library theResource) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome create(Library theResource, RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome create(Library theResource, String theIfNoneExist) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome create(Library theResource, String theIfNoneExist, boolean thePerformIndexing,
+            TransactionDetails theTransactionDetails, RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome create(Library theResource, String theIfNoneExist, RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome delete(IIdType theResource) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome delete(IIdType theResource, DeleteConflictList theDeleteConflictsListToPopulate,
+            RequestDetails theRequestDetails, TransactionDetails theTransactionDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome delete(IIdType theResource, RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DeleteMethodOutcome deleteByUrl(String theUrl, DeleteConflictList theDeleteConflictsListToPopulate,
+            RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DeleteMethodOutcome deleteByUrl(String theString, RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public DaoMethodOutcome patch(IIdType theId, String theConditionalUrl, PatchTypeEnum thePatchType,
+            String thePatchBody, RequestDetails theRequestDetails) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public IBaseResource readByPid(ResourcePersistentId thePid) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
     public IBundleProvider search(SearchParameterMap theParams, RequestDetails theRequestDetails) {
         // TODO Auto-generated method stub
-        System.out.println("Search 2");
         return null;
     }
 
@@ -337,10 +323,14 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
     public IBundleProvider search(SearchParameterMap theParams, RequestDetails theRequestDetails,
             HttpServletResponse theServletResponse) {
         // TODO Auto-generated method stub
-        System.out.println("Search 3");
         return null;
     }
 
+    @Override
+    public Set<ResourcePersistentId> searchForIds(SearchParameterMap theParams, RequestDetails theRequest) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
     @Override
     public void translateRawParameters(Map<String, List<String>> theSource, SearchParameterMap theTarget) {
@@ -381,7 +371,7 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
 
     @Override
     public DaoMethodOutcome update(Library theResource, String theMatchUrl, boolean thePerformIndexing,
-            boolean theForceUpdateVersion, RequestDetails theRequestDetails) {
+            boolean theForceUpdateVersion, RequestDetails theRequestDetails, TransactionDetails theTransactionDetails) {
         // TODO Auto-generated method stub
         return null;
     }
@@ -399,16 +389,5 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
         return null;
     }
 
-    @Override
-    public IBaseResource readByPid(ResourcePersistentId thePid) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Set<ResourcePersistentId> searchForIds(SearchParameterMap theParams, RequestDetails theRequest) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
+    
 }

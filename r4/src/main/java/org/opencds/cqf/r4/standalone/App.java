@@ -29,7 +29,7 @@ import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
 import org.opencds.cqf.r4.providers.MeasureOperationsProvider;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.jpa.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
@@ -42,16 +42,16 @@ import ca.uhn.fhir.parser.IParser;
  * Hello world!
  */
 public final class App {
-    private App() {
-    }
+    
 
     
     public static void main(String[] args)  {
         Parameters libParameters;
         try {
-            libParameters = getResource();
-            MeasureOperationsProvider measureProvider = getMeasureOperations();
-            String result = evaluateLibrary(libParameters, measureProvider);
+            App app = new App();
+            libParameters = app.getResource();
+            MeasureOperationsProvider measureProvider = app.getMeasureOperations();
+            String result = app.evaluateLibrary(libParameters, measureProvider);
             JSONObject json = new JSONObject(result); // Convert text to object
             System.out.println(json.toString(4)); 
             //System.out.println("The result recd is: "+result);
@@ -65,7 +65,7 @@ public final class App {
 
     }
 
-    private static MeasureOperationsProvider getMeasureOperations() {
+    public MeasureOperationsProvider getMeasureOperations() {
         FhirContext fhirContext = FhirContext.forR4();
         //ITermReadSvcR4 terminologySvcR4, FhirContext context, ValueSetResourceProvider valueSetResourceProvider
         TermReadSvcR4 terminologySvcR4 = new TermReadSvcR4();
@@ -83,7 +83,7 @@ public final class App {
         return measureProvider;
     }
 
-    private static String evaluateLibrary(Parameters libParameters, MeasureOperationsProvider measureProvider) {
+    public String evaluateLibrary(Parameters libParameters, MeasureOperationsProvider measureProvider) {
         String libraryId,criteria, subject, periodStart, periodEnd, source, patientServerUrl, patientServerToken, criteriaList,user,pass;
         libraryId =criteria =subject= periodStart=periodEnd= source= patientServerUrl= patientServerToken= criteriaList=user=pass = null;
         Bundle valueSetsBundle, dataBundle, libBundle;
@@ -135,7 +135,7 @@ public final class App {
         return FhirContext.forR4().newJsonParser().encodeResourceToString(result);
     }
 
-    private static Parameters getResource() {
+    public Parameters getResource() {
         File parafile = new File("/Users/sreekanth/githubrepos/Libevaluate-tool/fhir.json");
         IParser parser = FhirContext.forR4().newJsonParser();
         Parameters response;

@@ -55,12 +55,11 @@
         <jetty_version>9.4.14.v20181114</jetty_version>
         <jackson_version>2.10.1</jackson_version>
         <derby_version>10.14.2.0</derby_version>
-        <hapi_version>4.2.0</hapi_version>
+        <hapi_version>5.1.0</hapi_version>
         <cqf-tooling.version>1.1.1</cqf-tooling.version>
         <cql-engine.version>1.5.0-SNAPSHOT</cql-engine.version>
         <cql-evaluator.version>1.0.0-SNAPSHOT</cql-evaluator.version>
         <cqframework.version>1.4.9</cqframework.version>
-        <cds_hooks_version>1.1.0-SNAPSHOT</cds_hooks_version>
 
         <!-- jetty plugin properties (used when starting server locally) -->
         <dev>true</dev>
@@ -141,14 +140,9 @@
             <version>${cqframework.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.opencds.cqf</groupId>
-            <artifactId>cds</artifactId>
-            <version>${cds_hooks_version}</version>
-        </dependency>
-        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.6</version>
+            <version>8.0.20</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
