@@ -3,16 +3,19 @@ package org.opencds.cqf.common.config;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Driver;
 
-import ca.uhn.fhir.jpa.api.config.DaoConfig;
-import ca.uhn.fhir.jpa.model.entity.ModelConfig;
+import javax.persistence.EntityManagerFactory;
+
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowire;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-//import ca.uhn.fhir.jpa.dao.DaoConfig;
-import ca.uhn.fhir.rest.server.interceptor.IServerInterceptor;
+import ca.uhn.fhir.jpa.api.config.DaoConfig;
+import ca.uhn.fhir.jpa.model.config.PartitionSettings;
+import ca.uhn.fhir.jpa.model.entity.ModelConfig;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 
@@ -65,6 +68,23 @@ public class FhirServerConfig {
     }
 
     @Bean
+  public PartitionSettings partitionSettings() {
+    PartitionSettings retVal = new PartitionSettings();
+
+    // Partitioning
+    if (HapiProperties.getPartitioningMultitenancyEnabled()) {
+      retVal.setPartitioningEnabled(true);
+    }
+
+    return retVal;
+  }
+
+    // @Bean
+    // public BatchConfigurer batchConfigurer() {
+    //     return new NonPersistedBatchConfigurer();
+    // }
+
+    @Bean
     public ModelConfig modelConfig() {
         ModelConfig modelConfig = new ModelConfig();
         modelConfig.setAllowContainsSearches(this.allowContainsSearches);
@@ -74,6 +94,14 @@ public class FhirServerConfig {
 
         return modelConfig;
     }
+
+    @Primary
+	@Bean
+	public JpaTransactionManager hapiTransactionManager(EntityManagerFactory entityManagerFactory) {
+		JpaTransactionManager retVal = new JpaTransactionManager();
+		retVal.setEntityManagerFactory(entityManagerFactory);
+		return retVal;
+	}
 
     /**
      * The following bean configures the database connection. The 'url' property value of "jdbc:derby:directory:jpaserver_derby_files;create=true" indicates that the server should save resources in a

@@ -47,6 +47,7 @@ public class HapiProperties {
     static final String ALLOW_CONTAINS_SEARCHES = "allow_contains_searches";
     static final String ALLOW_OVERRIDE_DEFAULT_SEARCH_PARAMS = "allow_override_default_search_params";
     static final String EMAIL_FROM = "email.from";
+    static final String PARTITIONING_MULTITENANCY_ENABLED = "partitioning.multitenancy.enabled";
 
     private static Properties properties;
 
@@ -340,4 +341,8 @@ public class HapiProperties {
         String value = HapiProperties.getProperty(REUSE_CACHED_SEARCH_RESULTS_MILLIS, "-1");
         return Long.valueOf(value);
     }
+
+    public static boolean getPartitioningMultitenancyEnabled() {
+        return HapiProperties.getBooleanProperty(PARTITIONING_MULTITENANCY_ENABLED, false);
+      }
 }
