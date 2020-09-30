@@ -391,6 +391,13 @@ public class LibraryBundleDao implements IFhirResourceDao<Library> {
 		return null;
 	}
 
+    @Override
+    public DeleteMethodOutcome deletePidList(String arg0, Collection<ResourcePersistentId> arg1,
+            DeleteConflictList arg2, RequestDetails arg3) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
 	
 
     
