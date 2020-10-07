@@ -8,7 +8,7 @@ import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.UriParam;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
-import ca.uhn.fhir.util.VersionIndependentConcept;
+import ca.uhn.fhir.util.FhirVersionIndependentConcept;
 
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
@@ -120,8 +120,8 @@ public class JpaTerminologyProvider implements TerminologyProvider {
             
         }
 
-        List<VersionIndependentConcept> expansion = terminologySvcR4.expandValueSet(new ValueSetExpansionOptions(),   valueSet.getId());
-        for (VersionIndependentConcept concept : expansion) {
+        List<FhirVersionIndependentConcept> expansion = terminologySvcR4.expandValueSet(new ValueSetExpansionOptions(),   valueSet.getId());
+        for (FhirVersionIndependentConcept concept : expansion) {
             codes.add(new Code().withCode(concept.getCode()).withSystem(concept.getSystem()));
         }
 
