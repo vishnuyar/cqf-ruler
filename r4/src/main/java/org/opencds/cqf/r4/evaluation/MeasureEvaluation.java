@@ -711,7 +711,7 @@ public class MeasureEvaluation {
         if (!resources.isEmpty()) {
             FhirMeasureBundler bundler = new FhirMeasureBundler();
             org.hl7.fhir.r4.model.Bundle evaluatedResources = bundler.bundle(resources.values());
-            evaluatedResources.setId(UUID.randomUUID().toString());
+            evaluatedResources.setId("#"+UUID.randomUUID().toString());
             report.setEvaluatedResource(Collections.singletonList(new Reference(evaluatedResources.getId())));
             report.addContained(evaluatedResources);
             
