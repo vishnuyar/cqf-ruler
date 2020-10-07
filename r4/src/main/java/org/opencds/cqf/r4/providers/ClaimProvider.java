@@ -19,6 +19,7 @@ import org.hl7.fhir.r4.model.ClaimResponse.ErrorComponent;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Endpoint;
+import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
@@ -414,6 +415,10 @@ public class ClaimProvider extends ClaimResourceProvider {
 									serverPatient = getPatient(patient);
 								}
 								if (serverPatient == null) {
+									
+									patient.setId(new IdType());
+									patient.setGeneralPractitioner(null);
+									System.out.println("creating patient \n"+FhirContext.forR4().newJsonParser().encodeResourceToString(patient));
 									DaoMethodOutcome patientOutcome = patientDao.create(patient);
 									serverPatient = (Patient) patientOutcome.getResource();
 
