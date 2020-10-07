@@ -797,8 +797,8 @@ public class MeasureOperationsProvider {
                                 .setResource(entry.getResource()));
 
                         resourceMap.put(entry.getResource().getIdElement().getValue(), entry.getResource());
-
-                        resolveReferences(entry.getResource(), parameters, resourceMap, dataBundle);
+                        // Commenting for now to resolve bug for remotefhir care-gap
+                        //resolveReferences(entry.getResource(), parameters, resourceMap, dataBundle);
                     }
                 }
             }
