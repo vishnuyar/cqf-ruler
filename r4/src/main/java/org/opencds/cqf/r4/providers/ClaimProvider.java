@@ -241,11 +241,17 @@ public class ClaimProvider extends ClaimResourceProvider {
 		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
 			if (entry.getResource().getIdElement().getIdPart().equals(insurerID)) {
 				Organization insurer = (Organization) entry.getResource();
-				String name = insurer.getName();
+				String paramValue = "";
+				for (Identifier identifier :insurer.getIdentifier()){
+					if (paramValue != ""){
+						paramValue += ",";
+					}
+					paramValue += identifier.getSystem()+"|"+identifier.getValue();
+				}
 				JSONObject params = new JSONObject();
-				System.out.println("Insurer name: " + name);
+				System.out.println("Insurer identifiers: " + paramValue);
 				try {
-					params.put("payer_name", name);
+					params.put("payer_name", paramValue);
 					byte[] postDataBytes = null;
 					postDataBytes = params.toString().getBytes("UTF-8");
 					JSONObject httpResponse = postHttpRequest(searchURL, postDataBytes, null);
@@ -283,7 +289,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 					JSONObject resource = entries.getJSONObject(i);
 					if (resource.getString("resourceType").equals("Endpoint")) {
 						Endpoint endpoint = parser.parseResource(Endpoint.class, resource.toString());
-						if (endpoint.getName().contains("X12")) {
+						if (endpoint.getName().equals("X12 EndPoint")) {
 							payerURL = endpoint.getAddress();
 							return payerURL;
 						}
