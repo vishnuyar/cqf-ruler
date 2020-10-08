@@ -2,7 +2,6 @@ package org.opencds.cqf.r4.providers;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -26,7 +25,6 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.slf4j.Logger;
@@ -54,6 +52,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 	DaoRegistry registry;
 	JSONArray errors = new JSONArray();
 	IParser parser = FhirContext.forR4().newJsonParser();
+	boolean send275 = false;
 
 	public ClaimProvider(ApplicationContext appCtx) {
 		this.bundleDao = (IFhirResourceDao<Bundle>) appCtx.getBean("myBundleDaoR4", IFhirResourceDao.class);
@@ -139,22 +138,29 @@ public class ClaimProvider extends ClaimResourceProvider {
 		try {
 			// set envelpe to true to enclose generated x12 in soap envelope
 			JSONObject x12request = new JSONObject();
-			x12request.put("claim_json", jsonStr);
-			x12request.put("envelope", "true");
+			x12request.put("claimJson", jsonStr);
+			x12request.put("envelope", true);
+			System.out.println("Attaching 275 data: "+this.send275);
+			x12request.put("send275",this.send275);
 			String x12Str = x12request.toString();
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
 			x12_generated = postHttpRequest(strUrl, postDataBytes, apiKey);
 			if (x12_generated.has("statusCode")) {
 				if ((int) x12_generated.get("statusCode") >= HttpURLConnection.HTTP_BAD_REQUEST) {
 					JSONObject response = new JSONObject(x12_generated.getString("body"));
-					JSONArray errors = response.getJSONArray("errors");
-					for (int i = 0; i < errors.length(); i++) {
-						JSONObject errorObj = new JSONObject(errors.get(i).toString());
-						System.out.println("errorObj: " + errorObj);
-						String code = errorObj.getString("code");
-						String message = errorObj.getString("message");
-						errorList.add(generateErrorComponent(code, message));
-					}
+					if (response.has("errors")){
+						JSONArray errors = response.getJSONArray("errors");
+						for (int i = 0; i < errors.length(); i++) {
+							JSONObject errorObj = new JSONObject(errors.get(i).toString());
+							System.out.println("errorObj: " + errorObj);
+							String code = errorObj.getString("code");
+							String message = errorObj.getString("message");
+							errorList.add(generateErrorComponent(code, message));
+						}
+					} else {
+						errorList.add(generateErrorComponent(x12_generated.get("statusCode").toString(), response.toString()));
+					} 
+					
 				}
 			}
 			// System.out.println("\n x12_generated :" + x12_generated);
@@ -292,7 +298,11 @@ public class ClaimProvider extends ClaimResourceProvider {
 						Endpoint endpoint = parser.parseResource(Endpoint.class, resource.toString());
 						if (endpoint.getName().equals("X12 EndPoint")) {
 							payerURL = endpoint.getAddress();
-							return payerURL;
+						}
+						// If x12 275 endpoint exists send claim data along with x12
+						if (endpoint.getName().equals("X12 275 EndPoint")) {
+							System.out.println("Found x12 275 endpoints");
+							this.send275=true;
 						}
 					}
 				}
