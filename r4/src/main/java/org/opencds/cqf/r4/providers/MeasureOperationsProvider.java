@@ -285,7 +285,6 @@ public class MeasureOperationsProvider {
         return report;
     }
 
-    
     @Operation(name = "$lib-evaluate", idempotent = true, type = Measure.class)
     public Parameters libraryEvaluate(@OperationParam(name = "libraryId") String libraryId,
             @OperationParam(name = "criteria") String criteria, @OperationParam(name = "subject") String patientRef,
@@ -293,6 +292,8 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "source") String source,
             @OperationParam(name = "patientServerUrl") String patientServerUrl,
             @OperationParam(name = "patientServerToken") String patientServerToken,
+            @OperationParam(name = "libraryServerUrl") String libraryServerUrl,
+            @OperationParam(name = "libraryServerToken") String libraryServerToken,
             @OperationParam(name = "criteriaList") String criteriaList,
             @OperationParam(name = "valueSetsBundle", min = 1, max = 1, type = Bundle.class) Bundle valueSetsBundle,
             @OperationParam(name = "dataBundle", min = 1, max = 1, type = Bundle.class) Bundle dataBundle,
@@ -322,14 +323,15 @@ public class MeasureOperationsProvider {
                 this.local = false;
                 this.retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
             }
+            if (patientServerToken != null) {
+                if (patientServerToken != "") {
+                    this.nonLocal.put("patient_server_token", patientServerToken);
+                }
 
-        }
-        if (patientServerToken != null) {
-            if (patientServerToken != "") {
-                this.nonLocal.put("patient_server_token", patientServerToken);
             }
 
         }
+
         if (dataBundle != null) {
             this.retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
             nonLocal.put("dataBundle", dataBundle);
@@ -342,6 +344,14 @@ public class MeasureOperationsProvider {
 
         LibraryResourceProvider rp = new LibraryResourceProvider();
         rp.setDao(defaultLibraryResourceProvider.getDao());
+
+        if ((libraryServerUrl != null) && (libraryServerUrl != "")) {
+            if ((libraryServerToken != null) && (libraryServerToken != "")) {
+                rp.setDao(new RemoteLibraryBundleDao(libraryServerUrl,libraryServerToken));
+            } else {
+                rp.setDao(new RemoteLibraryBundleDao(libraryServerUrl,null));
+            }
+        }
 
         if (libBundle != null) {
             rp.setDao(new LibraryBundleDao(libBundle));
@@ -798,7 +808,7 @@ public class MeasureOperationsProvider {
 
                         resourceMap.put(entry.getResource().getIdElement().getValue(), entry.getResource());
                         // Commenting for now to resolve bug for remotefhir care-gap
-                        //resolveReferences(entry.getResource(), parameters, resourceMap, dataBundle);
+                        // resolveReferences(entry.getResource(), parameters, resourceMap, dataBundle);
                     }
                 }
             }

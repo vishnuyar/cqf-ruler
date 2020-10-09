@@ -3,26 +3,12 @@ package org.opencds.cqf.r4.standalone;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashMap;
 
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Library;
-import org.hl7.fhir.r4.model.Narrative;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Resource;
-import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.json.JSONObject;
-import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
-import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
-import org.opencds.cqf.cql.engine.data.DataProvider;
-import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
-import org.opencds.cqf.cql.engine.fhir.terminology.R4FhirTerminologyProvider;
 import org.opencds.cqf.library.r4.NarrativeProvider;
-import org.opencds.cqf.r4.evaluation.MeasureEvaluationSeed;
 import org.opencds.cqf.r4.evaluation.ProviderFactory;
 import org.opencds.cqf.r4.providers.HQMFProvider;
 import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
@@ -34,7 +20,6 @@ import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
 import ca.uhn.fhir.jpa.term.TermReadSvcR4;
-import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.parser.IParser;
 
@@ -84,8 +69,8 @@ public final class App {
     }
 
     public String evaluateLibrary(Parameters libParameters, MeasureOperationsProvider measureProvider) {
-        String libraryId,criteria, subject, periodStart, periodEnd, source, patientServerUrl, patientServerToken, criteriaList,user,pass;
-        libraryId =criteria =subject= periodStart=periodEnd= source= patientServerUrl= patientServerToken= criteriaList=user=pass = null;
+        String libraryId,criteria, subject, periodStart, periodEnd, source, patientServerUrl, patientServerToken, libraryServerUrl, libraryServerToken,criteriaList,user,pass;
+        libraryId =criteria =subject= periodStart=periodEnd= source= patientServerUrl= patientServerToken=libraryServerUrl= libraryServerToken= criteriaList=user=pass = null;
         Bundle valueSetsBundle, dataBundle, libBundle;
         valueSetsBundle =dataBundle = libBundle= null;
         Parameters parameters = null;
@@ -115,6 +100,12 @@ public final class App {
             if (para.getName().equals("patientServerToken")){
                 patientServerToken = para.getValue().toString();
             }
+            if (para.getName().equals("libraryServerUrl")){
+                libraryServerUrl = para.getValue().toString();
+            }
+            if (para.getName().equals("libraryServerToken")){
+                libraryServerToken = para.getValue().toString();
+            }
             if (para.getName().equals("criteriaList")){
                 criteriaList = para.getValue().toString();
             }
@@ -131,12 +122,12 @@ public final class App {
                 parameters = (Parameters)para.getResource();
             }
         }
-        Parameters result =  measureProvider.libraryEvaluate(libraryId, criteria, subject, periodStart, periodEnd, source, patientServerUrl, patientServerToken, criteriaList, valueSetsBundle, dataBundle, libBundle, user, parameters, pass);
+        Parameters result =  measureProvider.libraryEvaluate(libraryId, criteria, subject, periodStart, periodEnd, source, patientServerUrl, patientServerToken, libraryServerUrl, libraryServerToken, criteriaList, valueSetsBundle, dataBundle, libBundle, user, parameters, pass);
         return FhirContext.forR4().newJsonParser().encodeResourceToString(result);
     }
 
     public Parameters getResource() {
-        File parafile = new File("/Users/sreekanth/githubrepos/Libevaluate-tool/fhir.json");
+        File parafile = new File("/Users/sreekanth/githubrepos/Libevaluate-tool/remotelib.json");
         IParser parser = FhirContext.forR4().newJsonParser();
         Parameters response;
         try {
