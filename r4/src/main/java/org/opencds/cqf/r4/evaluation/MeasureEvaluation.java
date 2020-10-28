@@ -286,6 +286,15 @@ public class MeasureEvaluation {
                     parameters.addParameter(cqlcriteria, (String) cqlResult);
 
                 }
+                else if (cqlResult instanceof Integer) {
+                    IntegerType intType = new IntegerType();
+                    intType.setValue((Integer)cqlResult);
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                    pc.setValue(intType);
+                    parameters.addParameter(pc);
+
+                }
 
                 else {
                     System.out.println("Final no cast available");
