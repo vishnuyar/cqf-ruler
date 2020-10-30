@@ -295,6 +295,13 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
 
                 }
+                else if (cqlResult instanceof DecimalType) {
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                    pc.setValue((DecimalType)cqlResult);
+                    parameters.addParameter(pc);
+
+                }
 
                 else {
                     System.out.println("Final no cast available");
