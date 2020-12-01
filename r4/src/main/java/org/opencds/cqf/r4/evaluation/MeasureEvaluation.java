@@ -7,8 +7,6 @@ import ca.uhn.fhir.model.api.TemporalPrecisionEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.cqframework.cql.elm.execution.ExpressionDef;
 import org.cqframework.cql.elm.execution.Library;
@@ -144,19 +142,18 @@ public class MeasureEvaluation {
 
                                 if (obj instanceof Patient.PatientLinkComponent) {
                                     PatientLinkComponent linkComp = (PatientLinkComponent) obj;
-                                    System.out.println("link comp reference : "+linkComp.getOther().getReference());
+                                    System.out.println("link comp reference : " + linkComp.getOther().getReference());
                                     Reference linkRef = new Reference();
                                     linkRef.setReference(linkComp.getOther().getReference());
                                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
-                            .setName(cqlcriteria);
+                                            .setName(cqlcriteria);
                                     pc.setValue(linkRef);
                                     parameters.addParameter(pc);
-                
+
                                 } else {
                                     System.out.println("Object of type" + obj.getClass());
                                     arrayValues.add(obj.toString());
                                 }
-                                
 
                             }
 
@@ -167,10 +164,10 @@ public class MeasureEvaluation {
                         parameters.addParameter(
                                 new Parameters.ParametersParameterComponent().setName(cqlcriteria).setResource(bundle));
                     } else {
-                        if (arrayValues.size() > 0){
+                        if (arrayValues.size() > 0) {
                             parameters.addParameter(cqlcriteria, String.join(",", arrayValues));
                         }
-                        
+
                     }
 
                 } else if (cqlResult instanceof Resource) {
@@ -282,23 +279,28 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     // System.out.println("casting to Period " + cqlPeriod.toString());
 
-                }  else if (cqlResult instanceof String) {
+                } else if (cqlResult instanceof String) {
                     parameters.addParameter(cqlcriteria, (String) cqlResult);
 
-                }
-                else if (cqlResult instanceof Integer) {
+                } else if (cqlResult instanceof Integer) {
                     IntegerType intType = new IntegerType();
-                    intType.setValue((Integer)cqlResult);
+                    intType.setValue((Integer) cqlResult);
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
                     pc.setValue(intType);
                     parameters.addParameter(pc);
 
-                }
-                else if (cqlResult instanceof DecimalType) {
+                } else if (cqlResult instanceof DecimalType) {
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
-                    pc.setValue((DecimalType)cqlResult);
+                    pc.setValue((DecimalType) cqlResult);
+                    parameters.addParameter(pc);
+
+                } else if (cqlResult instanceof CodeableConcept) {
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                    CodeableConcept code = (CodeableConcept)cqlResult;
+                    pc.setValue(code);
                     parameters.addParameter(pc);
 
                 }
