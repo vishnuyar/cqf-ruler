@@ -60,9 +60,9 @@ public class ClaimProvider extends ClaimResourceProvider {
 				IFhirResourceDao.class);
 		this.patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
 		this.registry = appCtx.getBean(DaoRegistry.class);
-		System.out.println("----\n---");
-		System.out.println(this.ClaimResponseDao);
-		System.out.println(this.bundleDao);
+		//System.out.println("----\n---");
+		//System.out.println(this.ClaimResponseDao);
+		//System.out.println(this.bundleDao);
 	}
 
 	@Override
