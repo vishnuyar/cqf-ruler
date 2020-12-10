@@ -14,7 +14,9 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.ClaimResponse;
+import org.hl7.fhir.r4.model.ClaimResponse.AdjudicationComponent;
 import org.hl7.fhir.r4.model.ClaimResponse.ErrorComponent;
+import org.hl7.fhir.r4.model.ClaimResponse.ItemDetailComponent;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Endpoint;
@@ -24,6 +26,7 @@ import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.Claim.ItemComponent;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.opencds.cqf.common.config.HapiProperties;
@@ -60,9 +63,9 @@ public class ClaimProvider extends ClaimResourceProvider {
 				IFhirResourceDao.class);
 		this.patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
 		this.registry = appCtx.getBean(DaoRegistry.class);
-		//System.out.println("----\n---");
-		//System.out.println(this.ClaimResponseDao);
-		//System.out.println(this.bundleDao);
+		// System.out.println("----\n---");
+		// System.out.println(this.ClaimResponseDao);
+		// System.out.println(this.bundleDao);
 	}
 
 	@Override
@@ -113,7 +116,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 			httpResponse.put("body", sb.toString());
 			conn.disconnect();
 			logger.info("StatusCode: " + conn.getResponseCode());
-			logger.info("body: " + sb.toString());
+			// logger.info("body: " + sb.toString());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -140,15 +143,15 @@ public class ClaimProvider extends ClaimResourceProvider {
 			JSONObject x12request = new JSONObject();
 			x12request.put("claimJson", jsonStr);
 			x12request.put("envelope", true);
-			System.out.println("Attaching 275 data: "+this.send275);
-			x12request.put("send275",this.send275);
+			System.out.println("Attaching 275 data: " + this.send275);
+			x12request.put("send275", this.send275);
 			String x12Str = x12request.toString();
 			byte[] postDataBytes = x12Str.getBytes("UTF-8");
 			x12_generated = postHttpRequest(strUrl, postDataBytes, apiKey);
 			if (x12_generated.has("statusCode")) {
 				if ((int) x12_generated.get("statusCode") >= HttpURLConnection.HTTP_BAD_REQUEST) {
 					JSONObject response = new JSONObject(x12_generated.getString("body"));
-					if (response.has("errors")){
+					if (response.has("errors")) {
 						JSONArray errors = response.getJSONArray("errors");
 						for (int i = 0; i < errors.length(); i++) {
 							JSONObject errorObj = new JSONObject(errors.get(i).toString());
@@ -158,9 +161,10 @@ public class ClaimProvider extends ClaimResourceProvider {
 							errorList.add(generateErrorComponent(code, message));
 						}
 					} else {
-						errorList.add(generateErrorComponent(x12_generated.get("statusCode").toString(), response.toString()));
-					} 
-					
+						errorList.add(generateErrorComponent(x12_generated.get("statusCode").toString(),
+								response.toString()));
+					}
+
 				}
 			}
 			// System.out.println("\n x12_generated :" + x12_generated);
@@ -199,7 +203,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 		return response;
 	}
 
-	private ClaimResponse generateClaimResponse(Patient patient, Claim claim) {
+	private ClaimResponse generateClaimResponse(Patient patient, Claim claim, Organization insurer) {
 		ClaimResponse retVal = new ClaimResponse();
 		try {
 
@@ -234,55 +238,93 @@ public class ClaimProvider extends ClaimResourceProvider {
 			claimResIdentifier.setValue(ref);
 			retVal.addIdentifier(claimResIdentifier);
 
+			// Add Insurer reference to the claim response
+			Reference insurerReference = new Reference();
+			for (Identifier identifier : insurer.getIdentifier()) {
+				CodeableConcept code = identifier.getType();
+				for (Coding coding : code.getCoding()){
+					if (coding.getCode().equals("NIIP")){
+						insurerReference.setIdentifier(identifier);
+						retVal.setInsurer(insurerReference);
+					}
+				}
+			}	
+			
+
+			//Add Items sequence from Claim
+			for (ItemComponent item :claim.getItem()){
+				org.hl7.fhir.r4.model.ClaimResponse.ItemComponent responseItem = new org.hl7.fhir.r4.model.ClaimResponse.ItemComponent();
+				AdjudicationComponent adjComponent = new AdjudicationComponent();
+				CodeableConcept code = new CodeableConcept();
+				Coding coding = new Coding();
+				coding.setCode("submitted");
+				coding.setDisplay("Submitted Amount");
+				coding.setSystem("http://terminology.hl7.org/CodeSystem/adjudication");
+				code.addCoding(coding);
+				adjComponent.setCategory(code);
+				adjComponent.setAmount(item.getNet());
+				responseItem.setItemSequence(item.getSequence());
+				responseItem.addAdjudication(adjComponent);
+				retVal.addItem(responseItem);
+			}
+
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 		return retVal;
 	}
 
-	private String getPayerURL(Bundle bundle, Claim claim, List<ErrorComponent> errorList, String searchURL) {
-		String payerURL = null;
+	private Organization getInsurer(Bundle bundle, Claim claim) {
 		String insurerID = claim.getInsurer().getReference().replace("Organization/", "");
 		System.out.println("INS: " + insurerID);
 		System.out.println(bundle.getEntry().size());
 		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
 			if (entry.getResource().getIdElement().getIdPart().equals(insurerID)) {
 				Organization insurer = (Organization) entry.getResource();
-				String paramValue = "";
-				for (Identifier identifier :insurer.getIdentifier()){
-					if (paramValue != ""){
-						paramValue += ",";
-					}
-					paramValue += identifier.getSystem()+"|"+identifier.getValue();
-				}
-				JSONObject params = new JSONObject();
-				System.out.println("Insurer identifiers: " + paramValue);
-				try {
-					params.put("payer_name", paramValue);
-					byte[] postDataBytes = null;
-					postDataBytes = params.toString().getBytes("UTF-8");
-					JSONObject httpResponse = postHttpRequest(searchURL, postDataBytes, null);
-					if (httpResponse.has("statusCode")) {
-						if ((int) httpResponse.get("statusCode") < HttpURLConnection.HTTP_BAD_REQUEST) {
-							String payerEndPoint = getEndPoint(httpResponse.getString("body"));
-							if (payerEndPoint != null) {
-								return payerEndPoint;
-							} else {
-								errorList.add(generateErrorComponent("400",
-										"Payer Endpoint for X12 Submission not available"));
-							}
-						} else {
-							errorList.add(generateErrorComponent("400", httpResponse.getString("body")));
-
-						}
-					} else {
-						errorList.add(generateErrorComponent("400", "Error when connecting to Payer Search URL"));
-					}
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
+				return insurer;
 			}
 		}
+		return null;
+	}
+
+	private String getPayerURL(Bundle bundle, Claim claim, List<ErrorComponent> errorList, String searchURL) {
+		String payerURL = null;
+		System.out.println(bundle.getEntry().size());
+		Organization insurer = getInsurer(bundle,claim);
+
+		String paramValue = "";
+		for (Identifier identifier : insurer.getIdentifier()) {
+			if (paramValue != "") {
+				paramValue += ",";
+			}
+			paramValue += identifier.getSystem() + "|" + identifier.getValue();
+		}
+		JSONObject params = new JSONObject();
+		System.out.println("Insurer identifiers: " + paramValue);
+		try {
+			params.put("payer_name", paramValue);
+			byte[] postDataBytes = null;
+			postDataBytes = params.toString().getBytes("UTF-8");
+			JSONObject httpResponse = postHttpRequest(searchURL, postDataBytes, null);
+			if (httpResponse.has("statusCode")) {
+				if ((int) httpResponse.get("statusCode") < HttpURLConnection.HTTP_BAD_REQUEST) {
+					String payerEndPoint = getEndPoint(httpResponse.getString("body"));
+					if (payerEndPoint != null) {
+						return payerEndPoint;
+					} else {
+						errorList.add(generateErrorComponent("400", "Payer Endpoint for X12 Submission not available"));
+					}
+				} else {
+					errorList.add(generateErrorComponent("400", httpResponse.getString("body")));
+
+				}
+			} else {
+				errorList.add(generateErrorComponent("400", "Error when connecting to Payer Search URL"));
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
 		return payerURL;
 	}
 
@@ -302,7 +344,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 						// If x12 275 endpoint exists send claim data along with x12
 						if (endpoint.getName().equals("X12 275 EndPoint")) {
 							System.out.println("Found x12 275 endpoints");
-							this.send275=true;
+							this.send275 = true;
 						}
 					}
 				}
@@ -390,7 +432,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 				throw new RuntimeException("API key for X12 Reader url is not available");
 			}
 			// Generate a ClaimResponse with data from Bundle to return the response
-			ClaimResponse retVal = generateClaimResponse(patient, claim);
+			Organization insurer = getInsurer(bundle,claim);
+			ClaimResponse retVal = generateClaimResponse(patient, claim,insurer);
 			// Get the payer url to submit the generated x12
 			String x12SubmitUrl = getPayerURL(bundle, claim, errorList, payerSearchUrl);
 			System.out.println("x12SubmitUrl " + x12SubmitUrl);
@@ -425,10 +468,11 @@ public class ClaimProvider extends ClaimResourceProvider {
 									serverPatient = getPatient(patient);
 								}
 								if (serverPatient == null) {
-									
+
 									patient.setId(new IdType());
 									patient.setGeneralPractitioner(null);
-									System.out.println("creating patient \n"+FhirContext.forR4().newJsonParser().encodeResourceToString(patient));
+									System.out.println("creating patient \n"
+											+ FhirContext.forR4().newJsonParser().encodeResourceToString(patient));
 									DaoMethodOutcome patientOutcome = patientDao.create(patient);
 									serverPatient = (Patient) patientOutcome.getResource();
 
@@ -490,6 +534,9 @@ public class ClaimProvider extends ClaimResourceProvider {
 		}
 		if (latestResponse.getExtension().size() > 0) {
 			currentResponse.setExtension(latestResponse.getExtension());
+		}
+		if (latestResponse.getItem().size()>0) {
+			currentResponse.setItem(latestResponse.getItem());
 		}
 		if (latestResponse.getProcessNote().size() > 0) {
 			currentResponse.setProcessNote(latestResponse.getProcessNote());
