@@ -229,7 +229,7 @@ public class MeasureEvaluation {
 
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
-                    pc.setValue((CodeType) cqlResult);
+                    pc.setValue((Coding) cqlResult);
                     parameters.addParameter(pc);
                     // System.out.println("casting to Code" + codeType.getValue());
 
