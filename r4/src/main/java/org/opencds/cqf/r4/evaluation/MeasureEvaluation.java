@@ -224,7 +224,18 @@ public class MeasureEvaluation {
                     parameters.addParameter(pc);
                     // System.out.println("casting to Code" + codeType.getValue());
 
-                } else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.Date) {
+                } else if (cqlResult instanceof Coding){
+                    //CodeType codeType = (CodeType) cqlResult;
+
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                    pc.setValue((CodeType) cqlResult);
+                    parameters.addParameter(pc);
+                    // System.out.println("casting to Code" + codeType.getValue());
+
+                } 
+                
+                else if (cqlResult instanceof org.opencds.cqf.cql.engine.runtime.Date) {
                     DateType date = new DateType();
                     org.opencds.cqf.cql.engine.runtime.Date cqlDate = (org.opencds.cqf.cql.engine.runtime.Date) cqlResult;
                     date.setValueAsString(cqlDate.toString());
