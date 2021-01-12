@@ -393,9 +393,9 @@ public class ClaimProvider extends ClaimResourceProvider {
 			claimBundle.setType(bundle.getType());
 			claimBundle.setIdentifier(bundle.getIdentifier());
 			for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-				// if (!entry.getResource().getResourceType().toString().equals("DocumentReference")) {
-				// 	claimBundle.addEntry(entry);
-				// }
+				//if (!entry.getResource().getResourceType().toString().equals("DocumentReference")) {
+					claimBundle.addEntry(entry);
+				//}
 				if (entry.getResource().getResourceType().toString().equals("Claim")) {
 					try {
 						claim = (Claim) entry.getResource();
