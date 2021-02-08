@@ -302,7 +302,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 		JSONObject params = new JSONObject();
 		System.out.println("Insurer identifiers: " + paramValue);
 		try {
-			params.put("payer_name", paramValue);
+			params.put("payer_identifier", paramValue);
 			byte[] postDataBytes = null;
 			postDataBytes = params.toString().getBytes("UTF-8");
 			JSONObject httpResponse = postHttpRequest(searchURL, postDataBytes, null);
@@ -324,7 +324,6 @@ public class ClaimProvider extends ClaimResourceProvider {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-
 		return payerURL;
 	}
 
@@ -352,7 +351,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-
+		// this.send275 = true;
+		// return "http://0.0.0.0:5000/api/submit";
 		return payerURL;
 	}
 
