@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.BaseReference;
 import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -379,7 +380,11 @@ public class MeasureOperationsProvider {
                 }
                 else if (pc.getValue() != null){
                     System.out.println("The value parameter value is :"+pc.getValue());
-                    context.setParameter(null, pc.getName(), pc.getValue());
+                    if (pc.getValue() instanceof BooleanType){
+                        boolean val = ((BooleanType) pc.getValue()).booleanValue();
+                        context.setParameter(null, pc.getName(), val);
+                    } 
+                    
                 }
             }
         }
