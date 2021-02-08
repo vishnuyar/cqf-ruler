@@ -378,6 +378,7 @@ public class MeasureOperationsProvider {
                     context.setParameter(null, pc.getName(), pc.getResource());
                 }
                 else if (pc.getValue() != null){
+                    System.out.println("The value parameter value is :"+pc.getValue());
                     context.setParameter(null, pc.getName(), pc.getValue());
                 }
             }
