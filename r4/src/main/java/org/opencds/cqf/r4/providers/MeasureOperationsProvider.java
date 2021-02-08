@@ -374,7 +374,12 @@ public class MeasureOperationsProvider {
         library = seed.getLibrary();
         if (parameters != null) {
             for (Parameters.ParametersParameterComponent pc : parameters.getParameter()) {
-                context.setParameter(null, pc.getName(), pc.getResource());
+                if (pc.getResource() != null){
+                    context.setParameter(null, pc.getName(), pc.getResource());
+                }
+                else if (pc.getValue() != null){
+                    context.setParameter(null, pc.getName(), pc.getValue());
+                }
             }
         }
         Parameters result = new Parameters();
