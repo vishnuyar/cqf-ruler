@@ -307,6 +307,12 @@ public class MeasureEvaluation {
                     pc.setValue((DecimalType) cqlResult);
                     parameters.addParameter(pc);
 
+                } else if (cqlResult instanceof BooleanType) {
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                    pc.setValue((BooleanType) cqlResult);
+                    parameters.addParameter(pc);
+
                 } else if (cqlResult instanceof CodeableConcept) {
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
