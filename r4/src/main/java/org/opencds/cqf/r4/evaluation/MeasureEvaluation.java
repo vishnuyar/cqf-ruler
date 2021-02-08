@@ -313,6 +313,12 @@ public class MeasureEvaluation {
                     pc.setValue((BooleanType) cqlResult);
                     parameters.addParameter(pc);
 
+                } else if (cqlResult instanceof StringType){
+                    Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
+                            .setName(cqlcriteria);
+                    pc.setValue((StringType) cqlResult);
+                    parameters.addParameter(pc);
+
                 } else if (cqlResult instanceof CodeableConcept) {
                     Parameters.ParametersParameterComponent pc = new Parameters.ParametersParameterComponent()
                             .setName(cqlcriteria);
