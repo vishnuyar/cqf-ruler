@@ -56,11 +56,14 @@ public class ClaimProvider extends ClaimResourceProvider {
 	JSONArray errors = new JSONArray();
 	IParser parser = FhirContext.forR4().newJsonParser();
 	boolean send275 = false;
+	private IFhirResourceDao<Claim> ClaimDao;
 
 	public ClaimProvider(ApplicationContext appCtx) {
 		this.bundleDao = (IFhirResourceDao<Bundle>) appCtx.getBean("myBundleDaoR4", IFhirResourceDao.class);
 		this.ClaimResponseDao = (IFhirResourceDao<ClaimResponse>) appCtx.getBean("myClaimResponseDaoR4",
 				IFhirResourceDao.class);
+		this.ClaimDao = (IFhirResourceDao<Claim>) appCtx.getBean("myClaimDaoR4",
+		IFhirResourceDao.class);
 		this.patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
 		this.registry = appCtx.getBean(DaoRegistry.class);
 		// System.out.println("----\n---");
@@ -466,6 +469,12 @@ public class ClaimProvider extends ClaimResourceProvider {
 								// Before adding claimResponse check if patient already available in the server
 								if (patient != null) {
 									serverPatient = getPatient(patient);
+								}
+								//Store the claim and put the reference in Claimresponse
+								if (claim != null){
+									DaoMethodOutcome claimOutcome = ClaimDao.create(claim);
+									Claim claimCreated = (Claim) claimOutcome.getResource();
+									updatedResponse.setRequest(new Reference(claimCreated.getId()));
 								}
 								if (serverPatient == null) {
 
