@@ -471,11 +471,11 @@ public class ClaimProvider extends ClaimResourceProvider {
 									serverPatient = getPatient(patient);
 								}
 								//Store the claim and put the reference in Claimresponse
-								if (claim != null){
-									DaoMethodOutcome claimOutcome = ClaimDao.create(claim);
-									Claim claimCreated = (Claim) claimOutcome.getResource();
-									updatedResponse.setRequest(new Reference(claimCreated.getId()));
-								}
+								// if (claim != null){
+								// 	DaoMethodOutcome claimOutcome = ClaimDao.create(claim);
+								// 	Claim claimCreated = (Claim) claimOutcome.getResource();
+								// 	updatedResponse.setRequest(new Reference(claimCreated.getId()));
+								// }
 								if (serverPatient == null) {
 
 									patient.setId(new IdType());
