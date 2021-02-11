@@ -24,6 +24,7 @@ import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.Claim.ItemComponent;
@@ -52,6 +53,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 	IFhirResourceDao<Bundle> bundleDao;
 	IFhirResourceDao<ClaimResponse> ClaimResponseDao;
 	IFhirResourceDao<Patient> patientDao;
+	IFhirResourceDao<Organization> OrganizationDao;
 	DaoRegistry registry;
 	JSONArray errors = new JSONArray();
 	IParser parser = FhirContext.forR4().newJsonParser();
@@ -62,6 +64,8 @@ public class ClaimProvider extends ClaimResourceProvider {
 		this.bundleDao = (IFhirResourceDao<Bundle>) appCtx.getBean("myBundleDaoR4", IFhirResourceDao.class);
 		this.ClaimResponseDao = (IFhirResourceDao<ClaimResponse>) appCtx.getBean("myClaimResponseDaoR4",
 				IFhirResourceDao.class);
+		this.OrganizationDao = (IFhirResourceDao<Organization>) appCtx.getBean("myOrganizationDaoR4",
+		IFhirResourceDao.class);
 		this.ClaimDao = (IFhirResourceDao<Claim>) appCtx.getBean("myClaimDaoR4",
 		IFhirResourceDao.class);
 		this.patientDao = (IFhirResourceDao<Patient>) appCtx.getBean("myPatientDaoR4", IFhirResourceDao.class);
@@ -360,6 +364,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 	}
 
 	private Patient getPatient(Patient patient) {
+		System.out.println("Trying to get patient");
 		Patient serverPatient = null;
 		for (Identifier identifier : patient.getIdentifier()) {
 			SearchParameterMap map = new SearchParameterMap();
@@ -376,7 +381,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 				return serverPatient;
 			}
 		}
-
+		System.out.println("PAtient not available");
 		return serverPatient;
 	}
 
@@ -387,7 +392,11 @@ public class ClaimProvider extends ClaimResourceProvider {
 			throws RuntimeException {
 		Patient patient = null;
 		Patient serverPatient = null;
+		Organization provider = null;
+		Organization serverProvider = null;
 		Claim claim = null;
+		String patientRef = null;
+		String providerRef = null;
 		Bundle responseBundle = new Bundle();
 		Bundle claimBundle = new Bundle();
 		ClaimResponse claimResponse = null;
@@ -402,13 +411,34 @@ public class ClaimProvider extends ClaimResourceProvider {
 				if (entry.getResource().getResourceType().toString().equals("Claim")) {
 					try {
 						claim = (Claim) entry.getResource();
+						patientRef = getPatientRef(claim);
+						providerRef = getProviderRef(claim);
 
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-				} else if (entry.getResource().getResourceType().toString().equals("Patient")) {
+				} else if ((entry.getResource().getResourceType().toString().equals("Patient")) ) {
 					try {
+						System.out.println("patient resrouce id"+entry.getResource().getId());
+						System.out.println("Patient available");
 						patient = (Patient) entry.getResource();
+						System.out.println("patientid:"+patient.getId());
+						if (!patient.getIdElement().getIdPart().equals(patientRef.split("/")[1])){
+							patient = null;
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				else if ((entry.getResource().getResourceType().toString().equals("Organization"))) {
+					try {
+						System.out.println("Provider idpart id:"+entry.getResource().getIdElement().getIdPart());
+						System.out.println("Provider available");
+						provider = (Organization) entry.getResource();
+						// System.out.println("providerid:"+FhirContext.forR4().newJsonParser().encodeResourceToString(provider));
+						if (!provider.getIdElement().getIdPart().equals(providerRef.split("/")[1])){
+							provider = null;
+						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -469,22 +499,35 @@ public class ClaimProvider extends ClaimResourceProvider {
 								// Before adding claimResponse check if patient already available in the server
 								if (patient != null) {
 									serverPatient = getPatient(patient);
+									if (serverPatient == null) {
+
+										patient.setId(new IdType());
+										patient.setGeneralPractitioner(null);
+										System.out.println("creating patient \n"
+												+ FhirContext.forR4().newJsonParser().encodeResourceToString(patient));
+										DaoMethodOutcome patientOutcome = patientDao.create(patient);
+										serverPatient = (Patient) patientOutcome.getResource();
+	
+									}
+								}
+								// Before adding claimResponse check if provider already available in the server
+								if (provider != null) {
+									serverProvider = getProvider(provider);
+									if (serverProvider == null) {
+										provider.setId(new IdType());
+										System.out.println("creating provider \n"
+												+ FhirContext.forR4().newJsonParser().encodeResourceToString(provider));
+										DaoMethodOutcome OrganizationOutcome = OrganizationDao.create(provider);
+										serverProvider = (Organization) OrganizationOutcome.getResource();
+									}
 								}
 								//Store the claim and put the reference in Claimresponse
-								if (claim != null){
-									DaoMethodOutcome claimOutcome = ClaimDao.create(claim);
+								if ((claim != null)&&(serverPatient!=null)&&(serverProvider!=null)){
+									Claim insertClaim = getInsertClaimData(claim,serverPatient.getId(),serverProvider.getId());
+									DaoMethodOutcome claimOutcome = ClaimDao.create(insertClaim);
 									Claim claimCreated = (Claim) claimOutcome.getResource();
 									updatedResponse.setRequest(new Reference(claimCreated.getId()));
-								}
-								if (serverPatient == null) {
-
-									patient.setId(new IdType());
-									patient.setGeneralPractitioner(null);
-									System.out.println("creating patient \n"
-											+ FhirContext.forR4().newJsonParser().encodeResourceToString(patient));
-									DaoMethodOutcome patientOutcome = patientDao.create(patient);
-									serverPatient = (Patient) patientOutcome.getResource();
-
+									System.out.println("Claim created is id:"+claimCreated.getId());
 								}
 								updatedResponse.setPatient(new Reference(serverPatient.getId()));
 								DaoMethodOutcome claimResponseOutcome = ClaimResponseDao.create(updatedResponse);
@@ -524,6 +567,57 @@ public class ClaimProvider extends ClaimResourceProvider {
 			ex.printStackTrace();
 			throw new RuntimeException(ex.getLocalizedMessage());
 		}
+	}
+
+	private Organization getProvider(Organization provider) {
+		System.out.println("Trying to get provider");
+		Organization serverProvider = null;
+		for (Identifier identifier : provider.getIdentifier()) {
+			SearchParameterMap map = new SearchParameterMap();
+			TokenParam param = new TokenParam();
+			param.setSystem(identifier.getSystem());
+			param.setValue(identifier.getValue());
+			map.add("identifier", param);
+			System.out.println(" search : " + map.toNormalizedQueryString(FhirContext.forR4()));
+			IBundleProvider OrganizationProvider = registry.getResourceDao("Organization").search(map);
+			List<IBaseResource> OrganizationList = OrganizationProvider.getResources(0, OrganizationProvider.size());
+			System.out.println("Organization available:" + OrganizationList.size());
+			if (OrganizationList.size() > 0) {
+				serverProvider = (Organization) OrganizationList.get(0);
+				return serverProvider;
+			}
+		}
+		System.out.println("Provider not available");
+		return serverProvider;
+	}
+
+	private String getProviderRef(Claim claim) {
+		System.out.println("the provider ref is :"+claim.getProvider().getReference());
+		System.out.println(claim.getProvider().getReferenceElement());
+		return claim.getProvider().getReference();
+		
+		
+	}
+
+	private String getPatientRef(Claim claim) {
+		System.out.println("the patient ref is :"+claim.getPatient().getReference());
+		return claim.getPatient().getReference();
+	}
+
+	private Claim getInsertClaimData(Claim claim, String patientRef,String providerRef) {
+		Claim newclaim = new Claim();
+		newclaim.setIdentifier(claim.getIdentifier());
+		newclaim.setStatus(claim.getStatus());
+		newclaim.setUse(claim.getUse());
+		newclaim.setPatient(new Reference(patientRef));
+		// newclaim.setCreated(claim.getCreated());
+		newclaim.setProvider(new Reference(providerRef));
+		for (ItemComponent item :newclaim.getItem()){
+			ItemComponent newItem = new ItemComponent();
+			newItem.setProductOrService(item.getProductOrService());
+			newclaim.addItem(newItem);
+		}
+		return newclaim;
 	}
 
 	private ErrorComponent generateErrorComponent(String code, String message) {
