@@ -336,6 +336,9 @@ public class MeasureOperationsProvider {
         if (dataBundle != null) {
             this.retrieverType = MeasureEvaluationSeed.INMEMORY_RETRIEVER;
             nonLocal.put("dataBundle", dataBundle);
+            System.out.println("\n\n*********Printing DataBundle************\n\n");
+            System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(dataBundle));
+            System.out.println("\n\n\n*********DataBundle Printed************\n\n");
             InMemoryRetrieveProvider.patient_fhir.set(nonLocal);
 
         }
@@ -355,6 +358,9 @@ public class MeasureOperationsProvider {
         }
 
         if (libBundle != null) {
+            System.out.println("\n\n*********Printing LibraryBundle************\n\n");
+            System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(libBundle));
+            System.out.println("\n\n\n*********LibraryBundle Printed************\n\n");
             rp.setDao(new LibraryBundleDao(libBundle));
 
         }
@@ -374,6 +380,9 @@ public class MeasureOperationsProvider {
         context = seed.getContext();
         library = seed.getLibrary();
         if (parameters != null) {
+            System.out.println("\n\n*********Printing Parameters************\n\n");
+            System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(parameters));
+            System.out.println("\n\n\n*********Parameters Printed************\n\n");
             for (Parameters.ParametersParameterComponent pc : parameters.getParameter()) {
                 if (pc.getResource() != null){
                     context.setParameter(null, pc.getName(), pc.getResource());
