@@ -307,9 +307,15 @@ public class MeasureOperationsProvider {
         if (criteria == null && criteriaList == null) {
             throw new RuntimeException("Either Criteria or Criteria List should be given");
         }
+        //Printing recd parameters
+        
+
+
         if (criteria != null) {
             evalCriterias.add(criteria);
+            System.out.println("criteria:"+criteria);
         } else {
+            System.out.println("criteria:"+criteriaList);
             String[] cList = criteriaList.split(",");
             for (String crit : cList) {
                 evalCriterias.add(crit);
@@ -318,14 +324,17 @@ public class MeasureOperationsProvider {
         if (libraryId == null) {
             throw new RuntimeException(" LibraryId cannot be null");
         }
+        System.out.println("libraryId:"+libraryId);
         if (patientServerUrl != null) {
             if (patientServerUrl != "") {
+                System.out.println("patientServerUrl:"+patientServerUrl);
                 this.nonLocal.put("patient_server_url", patientServerUrl);
                 this.local = false;
                 this.retrieverType = MeasureEvaluationSeed.REMOTE_RETRIEVER;
             }
             if (patientServerToken != null) {
                 if (patientServerToken != "") {
+                    System.out.println("patientServerToken:"+patientServerToken);
                     this.nonLocal.put("patient_server_token", patientServerToken);
                 }
 
@@ -351,8 +360,11 @@ public class MeasureOperationsProvider {
 
         if ((libraryServerUrl != null) && (libraryServerUrl != "")) {
             if ((libraryServerToken != null) && (libraryServerToken != "")) {
+                System.out.println("libraryServerUrl:"+libraryServerUrl);
+                System.out.println("libraryServerToken:"+libraryServerToken);
                 rp.setDao(new RemoteLibraryBundleDao(libraryServerUrl,libraryServerToken));
             } else {
+                System.out.println("libraryServerUrl:"+libraryServerUrl);
                 rp.setDao(new RemoteLibraryBundleDao(libraryServerUrl,null));
             }
         }
@@ -369,6 +381,9 @@ public class MeasureOperationsProvider {
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader, libOpsProvider);
         seed.setRetrieverType(this.retrieverType);
         if (valueSetsBundle != null) {
+            System.out.println("\n\n*********Printing ValueSetBundle************\n\n");
+            System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(valueSetsBundle));
+            System.out.println("\n\n\n*********ValueSetBundle Printed************\n\n");
             seed.setValueSetsBundle(valueSetsBundle);
         }
         seed.setupLibrary(libraryId, periodStart, periodEnd, null, source, user, pass);
