@@ -143,25 +143,34 @@ public class JpaTerminologyProvider implements TerminologyProvider {
     private ValueSet getRemoteValueSet(String valueSetUrl) {
         try {
             System.out.println("the baseurl is " + valueSetUrl);
-            // Adding the format parameter to get in json format
-            URL url = new URL(valueSetUrl + "?_format=json");
-            StringBuilder sb = new StringBuilder();
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            if (conn.getResponseCode() < HttpURLConnection.HTTP_BAD_REQUEST) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-                String line = null;
-                while ((line = in.readLine()) != null) {
-                    sb.append(line);
-                }
-                String result = sb.toString();
-                System.out.println(result);
-                IParser parser = FhirContext.forR4().newJsonParser();
-                ValueSet vs = parser.parseResource(ValueSet.class, result);
-                System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(vs));
-                return vs;
+            // Hardcoding for NLM Valueset. If the url contains nlm, check the valueset
+            // already available internally
+            if (valueSetUrl.contains("nlm")) {
+                String nlmId = valueSetUrl.substring(valueSetUrl.lastIndexOf('/') + 1);
+                System.out.println("Looking for nlm id " + nlmId);
+                ValueSet nlmvs = valueSetResourceProvider.getDao().read(new IdType(nlmId));
+                return nlmvs;
             } else {
-                System.out.println(conn.getResponseCode());
+                // Adding the format parameter to get in json format
+                URL url = new URL(valueSetUrl + "?_format=json");
+                StringBuilder sb = new StringBuilder();
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                if (conn.getResponseCode() < HttpURLConnection.HTTP_BAD_REQUEST) {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                    String line = null;
+                    while ((line = in.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    String result = sb.toString();
+                    System.out.println(result);
+                    IParser parser = FhirContext.forR4().newJsonParser();
+                    ValueSet vs = parser.parseResource(ValueSet.class, result);
+                    System.out.println(FhirContext.forR4().newJsonParser().encodeResourceToString(vs));
+                    return vs;
+                } else {
+                    System.out.println(conn.getResponseCode());
+                }
             }
 
         } catch (Exception e) {
