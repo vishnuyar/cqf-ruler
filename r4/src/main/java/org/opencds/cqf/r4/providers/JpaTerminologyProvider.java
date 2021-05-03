@@ -59,7 +59,7 @@ public class JpaTerminologyProvider implements TerminologyProvider {
         boolean needsExpand = false;
         ValueSet vs = null;
         List<IBaseResource> valueSets = new ArrayList<>();
-        System.out.println("Looking for valueset: " + valueSet.getId());
+        //System.out.println("Looking for valueset: " + valueSet.getId());
         if (valueSetsBundle.getEntry().size() > 1) {
             for (Bundle.BundleEntryComponent entry : valueSetsBundle.getEntry()) {
                 if (entry.getResource().getResourceType().toString().equals("ValueSet")) {
@@ -71,7 +71,7 @@ public class JpaTerminologyProvider implements TerminologyProvider {
             }
 
         } else if (valueSet.getId().startsWith("http://") || valueSet.getId().startsWith("https://")) {
-            System.out.println("looking for valueset from Remote");
+            //System.out.println("looking for valueset from Remote");
             ValueSet remoteValueSet = getRemoteValueSet(valueSet.getId());
             valueSets.add(remoteValueSet);
             System.out.println("verison: " + valueSet.getVersion());
@@ -147,7 +147,7 @@ public class JpaTerminologyProvider implements TerminologyProvider {
             // already available internally
             if (valueSetUrl.contains("nlm")) {
                 String nlmId = valueSetUrl.substring(valueSetUrl.lastIndexOf('/') + 1);
-                System.out.println("Looking for nlm id " + nlmId);
+                //System.out.println("Looking for nlm id " + nlmId);
                 ValueSet nlmvs = valueSetResourceProvider.getDao().read(new IdType(nlmId));
                 return nlmvs;
             } else {
