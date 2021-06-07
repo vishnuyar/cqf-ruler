@@ -467,6 +467,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 			// Generate a ClaimResponse with data from Bundle to return the response
 			Organization insurer = getInsurer(bundle,claim);
 			ClaimResponse retVal = generateClaimResponse(patient, claim,insurer);
+			// System.out.println("claim response created :"+ FhirContext.forR4().newJsonParser().encodeResourceToString(retVal));
 			// Get the payer url to submit the generated x12
 			String x12SubmitUrl = getPayerURL(bundle, claim, errorList, payerSearchUrl);
 			System.out.println("x12SubmitUrl " + x12SubmitUrl);
@@ -526,7 +527,11 @@ public class ClaimProvider extends ClaimResourceProvider {
 									Claim insertClaim = getInsertClaimData(claim,serverPatient.getId(),serverProvider.getId());
 									DaoMethodOutcome claimOutcome = ClaimDao.create(insertClaim);
 									Claim claimCreated = (Claim) claimOutcome.getResource();
-									updatedResponse.setRequest(new Reference(claimCreated.getId()));
+									Reference claimReference = new Reference();
+									claimReference.setReference(claimCreated.getId());
+									claimReference.setIdentifier(claim.getIdentifier().get(0));
+									updatedResponse.setRequest(claimReference);
+									//Add claim identififer to the reference also
 									System.out.println("Claim created is id:"+claimCreated.getId());
 								}
 								updatedResponse.setPatient(new Reference(serverPatient.getId()));
@@ -534,6 +539,7 @@ public class ClaimProvider extends ClaimResourceProvider {
 								claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
 								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(claimResponse));
 								responseBundle.addEntry(new Bundle.BundleEntryComponent().setResource(serverPatient));
+								responseBundle.setType(Bundle.BundleType.COLLECTION);
 								return responseBundle;
 
 							}
